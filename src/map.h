@@ -14,7 +14,7 @@ class Map {
  private:
   void read_map(const std::string &map_filepath);
 
- private:
+ public:
   double max_s{0.};
   std::vector<double> waypoints_x;
   std::vector<double> waypoints_y;
@@ -23,11 +23,17 @@ class Map {
   std::vector<double> waypoints_dy;
 };
 
+
 void Map::read_map(const std::string &map_filepath) {
-  std::ifstream in_map_(map_filepath.c_str(), std::ifstream::in);
+
+  std::ifstream input_filestream(map_filepath.c_str(), std::ifstream::in);
+
+  if(not input_filestream.good()) {
+    throw std::runtime_error(std::string("Unable to open file: \"") + map_filepath + '"');
+  }
 
   std::string line;
-  while (getline(in_map_, line)) {
+  while (getline(input_filestream, line)) {
     std::istringstream iss(line);
     double x,y;
     float s, d_x, d_y;

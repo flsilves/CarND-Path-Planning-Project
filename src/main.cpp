@@ -21,10 +21,10 @@ static std::ofstream telemetry_log("./telemetry.log", std::ios::app);
 int main() {
   uWS::Hub h;
 
-  Map highway_map(parameters::map_file, parameters::max_s);
+  Map map(parameters::map_file, parameters::max_s);
 
-  h.onMessage([&highway_map](uWS::WebSocket<uWS::SERVER> ws, char *data,
-                             size_t length, uWS::OpCode opCode) {
+  h.onMessage([&map](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+                     uWS::OpCode opCode) {
     if (valid_socket_message(length, data)) {
       auto s = hasData(data);
 
@@ -60,13 +60,21 @@ int main() {
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
-          double dist_inc = 0.5;
-          for (int i = 0; i < 50; ++i) {
-            next_x_vals.push_back(car_x +
-                                  (dist_inc * i) * cos(deg2rad(car_yaw)));
-            next_y_vals.push_back(car_y +
-                                  (dist_inc * i) * sin(deg2rad(car_yaw)));
-          }
+          std::cout << map.waypoints_x.size() << std::endl;
+
+          auto vec = getFrenet(car_x, car_y, car_yaw, map.waypoints_x,
+                               map.waypoints_y);
+
+          std::cout << vec.size() << std::endl;
+
+          // double dist_inc = 0.5;
+          // for (int i = 0; i < 50; ++i) {
+          //  next_x_vals.push_back(car_x +
+          //                        (dist_inc * i) * cos(deg2rad(car_yaw)));
+          //  next_y_vals.push_back(car_y +
+          //                        (dist_inc * i) * sin(deg2rad(car_yaw)));
+          //}
+
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 
