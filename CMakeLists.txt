@@ -7,11 +7,12 @@ add_definitions(-std=c++11)
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
-set(sources src/main.cpp)
+set(sources src/main.cpp src/map.cpp src/map.h src/parameters.h)
 
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 
+include_directories(src/)
 include_directories(/usr/local/include)
 include_directories(/usr/local/opt/openssl/include)
 link_directories(/usr/local/lib)

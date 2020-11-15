@@ -5,9 +5,10 @@
 #include <string>
 #include <vector>
 
-// for convenience
 using std::string;
 using std::vector;
+
+ const std::string manual_drive_message = "42[\"manual\",{}]";
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -152,6 +153,11 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
   double y = seg_y + d*sin(perp_heading);
 
   return {x,y};
+}
+
+static bool valid_socket_message(size_t length, char *socket_event) {
+  return length && length > 2 && socket_event[0] == '4' &&
+         socket_event[1] == '2';
 }
 
 #endif  // HELPERS_H
