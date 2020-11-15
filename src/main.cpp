@@ -25,13 +25,10 @@ int main() {
 
   h.onMessage([&highway_map](uWS::WebSocket<uWS::SERVER> ws, char *data,
                              size_t length, uWS::OpCode opCode) {
-    // "42" at the start of the message means there's a websocket message event.
-    // The 4 signifies a websocket message
-    // The 2 signifies a websocket event
-    if (length && length > 2 && data[0] == '4' && data[1] == '2') {
+    if (valid_socket_message(length, data)) {
       auto s = hasData(data);
 
-      if (s != "") {
+      if (not s.empty()) {
         auto j = json::parse(s);
 
         string event = j[0].get<string>();
@@ -63,10 +60,6 @@ int main() {
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
-          /**
-           * TODO: define a path made up of (x,y) points that the car will visit
-           *   sequentially every .02 seconds
-           */
           double dist_inc = 0.5;
           for (int i = 0; i < 50; ++i) {
             next_x_vals.push_back(car_x +
@@ -78,7 +71,6 @@ int main() {
           msgJson["next_y"] = next_y_vals;
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
-
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }  // end "telemetry" if
       } else {
