@@ -16,7 +16,7 @@ using nlohmann::json;
 using std::string;
 using std::vector;
 
-static std::ofstream log_flavio("./log.txt", std::ios::app);
+static std::ofstream telemetry_log("./telemetry.log", std::ios::app);
 
 int main() {
   uWS::Hub h;

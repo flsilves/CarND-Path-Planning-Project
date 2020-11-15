@@ -29,11 +29,8 @@ void Map::read_map(const std::string &map_filepath) {
   std::string line;
   while (getline(in_map_, line)) {
     std::istringstream iss(line);
-    double x;
-    double y;
-    float s;
-    float d_x;
-    float d_y;
+    double x,y;
+    float s, d_x, d_y;
     iss >> x;
     iss >> y;
     iss >> s;
