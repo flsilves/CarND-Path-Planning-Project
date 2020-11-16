@@ -4,10 +4,10 @@ cmake_minimum_required (VERSION 3.5)
 
 add_definitions(-std=c++11)
 
-set(CXX_FLAGS "-g" "-Wall")
+set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
-set(sources src/main.cpp src/helpers.h src/map.h src/parameters.h)
+set(sources src/main.cpp src/helpers.h src/map.h src/parameters.h lib/json.hpp)
 
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
@@ -23,5 +23,6 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 
 add_executable(path_planning ${sources})
+target_include_directories(path_planning PUBLIC lib/)
 
 target_link_libraries(path_planning z ssl uv uWS)
