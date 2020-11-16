@@ -100,7 +100,7 @@ int main() {
 
           if (too_close) {
             target_velocity -= .224;
-          } else if (target_velocity < 49.4) {
+          } else if (target_velocity < 49.5) {
             target_velocity += .224;
           }
 
