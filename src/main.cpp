@@ -16,6 +16,9 @@
 #include "map.h"
 #include "parameters.h"
 
+// NOTES
+// There's cars changing lanes in the simulation
+
 using nlohmann::json;
 using std::string;
 using std::vector;
@@ -43,9 +46,9 @@ int main() {
   double target_velocity = 0;  // mph
   int lane = 1;
 
-  h.onMessage([&map, &target_velocity](uWS::WebSocket<uWS::SERVER> ws,
-                                       char *data, size_t length,
-                                       uWS::OpCode opCode) {
+  h.onMessage([&map, &target_velocity, &lane](uWS::WebSocket<uWS::SERVER> ws,
+                                              char *data, size_t length,
+                                              uWS::OpCode opCode) {
     if (valid_socket_message(length, data)) {
       auto s = hasData(data);
 
@@ -66,7 +69,6 @@ int main() {
 
           auto sensor_fusion = data["sensor_fusion"];
 
-          int lane = 1;
           int prev_size = previous_path_x.size();
 
           double future_s;
@@ -99,7 +101,11 @@ int main() {
           }
 
           if (too_close) {
-            target_velocity -= .224;
+            if (lane > 0) {
+              lane = 0;
+            }
+            // target_velocity -= .224;
+
           } else if (target_velocity < 49.5) {
             target_velocity += .224;
           }
