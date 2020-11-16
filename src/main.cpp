@@ -1,12 +1,13 @@
 #include <uWS/uWS.h>
 
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
 
-#include "Eigen-3.3/Eigen/Core"
-#include "Eigen-3.3/Eigen/QR"
+//#include "Eigen-3.3/Eigen/Core"
+//#include "Eigen-3.3/Eigen/QR"
 #include "helpers.h"
 #include "json.hpp"
 #include "map.h"
@@ -60,20 +61,56 @@ int main() {
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
-          std::cout << map.waypoints_x.size() << std::endl;
+          std::cout << "car_x[" << std::fixed << std::setprecision(1)
+                    << std::setw(7) << car_x << ']' << " car_y["
+                    << std::setprecision(1) << std::setw(7) << car_y << ']'
+                    << std::endl;
 
-          auto vec = getFrenet(car_x, car_y, car_yaw, map.waypoints_x,
-                               map.waypoints_y);
+          if (not previous_path_x.empty()) {
+            std::cout << std::fixed << std::setprecision(1) << "prev_x["
+                      << std::fixed << std::setprecision(1) << std::setw(7)
+                      << std::setprecision(1) << previous_path_x.front() << "->"
+                      << std::setprecision(1) << std::setw(7)
+                      << previous_path_x.back() << "] prev_y["
+                      << std::setprecision(1) << std::setw(7)
+                      << previous_path_y.front() << "->" << std::setprecision(1)
+                      << std::setw(7) << previous_path_y.back() << ']'
+                      << std::endl;
+          }
+          // std::cout << map.waypoints_x.size() << std::endl;
 
-          std::cout << vec.size() << std::endl;
+          // std::cout << '\r' << "s:" << car_s << "d:" << car_d
+          //          << "yaw:" << car_yaw << "   ";
 
-          // double dist_inc = 0.5;
-          // for (int i = 0; i < 50; ++i) {
-          //  next_x_vals.push_back(car_x +
-          //                        (dist_inc * i) * cos(deg2rad(car_yaw)));
-          //  next_y_vals.push_back(car_y +
-          //                        (dist_inc * i) * sin(deg2rad(car_yaw)));
-          //}
+          // auto vec = getFrenet(car_x, car_y, car_yaw, map.waypoints_x,
+          //                     map.waypoints_y);
+
+          // std::cout << "Frenet{" << vec[0] << ',' << vec[1] << '}';
+
+          // std::cout << "Closest Waypoint"
+          //          << ClosestWaypoint(car_x, car_y, map.waypoints_x,
+          //                             map.waypoints_y)
+          //          << std::endl;
+
+          double dist_inc = 0.3;
+          for (int i = 0; i < 50; ++i) {
+            double next_s = car_s + (i + 1) * (dist_inc);
+            double next_d = 6;
+
+            auto xy = getXY(next_s, next_d, map.waypoints_s, map.waypoints_x,
+                            map.waypoints_y);
+            next_x_vals.push_back(xy[0]);
+            next_y_vals.push_back(xy[1]);
+          }
+
+          std::cout << "next_x[" << std::fixed << std::setprecision(3)
+                    << std::setw(7) << std::setprecision(3)
+                    << next_x_vals.front() << "->" << std::setprecision(3)
+                    << std::setw(7) << next_x_vals.back() << "] next_y["
+                    << std::setprecision(3) << std::setw(7)
+                    << next_y_vals.front() << "->" << std::setprecision(3)
+                    << std::setw(7) << next_y_vals.back() << "]\n"
+                    << std::endl;
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;

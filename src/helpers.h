@@ -142,6 +142,8 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
 
   int wp2 = (prev_wp+1)%maps_x.size();
 
+  //std::cout << "Waypoint:" << wp2 << std::endl;
+
   double heading = atan2((maps_y[wp2]-maps_y[prev_wp]),
                          (maps_x[wp2]-maps_x[prev_wp]));
   // the x,y,s along the segment
