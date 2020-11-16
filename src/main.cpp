@@ -19,6 +19,20 @@ using std::vector;
 
 static std::ofstream telemetry_log("./telemetry.log", std::ios::app);
 
+class EgoDynamics {
+ public:
+  EgoDynamics(json data) {
+    x = data["x"];
+    y = data["y"];
+    s = data["s"];
+    d = data["d"];
+    yaw = data["yaw"];
+    speed = data["speed"];
+  }
+
+  double x, y, s, d, yaw, speed;
+};
+
 int main() {
   uWS::Hub h;
 
@@ -35,26 +49,16 @@ int main() {
         string event = j[0].get<string>();
 
         if (event == "telemetry") {
-          // j[1] is the data JSON object
+          auto data = j[1];
 
-          // Main car's localization Data
-          double car_x = j[1]["x"];
-          double car_y = j[1]["y"];
-          double car_s = j[1]["s"];
-          double car_d = j[1]["d"];
-          double car_yaw = j[1]["yaw"];
-          double car_speed = j[1]["speed"];
+          EgoDynamics ego(data);
 
-          // Previous path data given to the Planner
-          auto previous_path_x = j[1]["previous_path_x"];
-          auto previous_path_y = j[1]["previous_path_y"];
-          // Previous path's end s and d values
-          double end_path_s = j[1]["end_path_s"];
-          double end_path_d = j[1]["end_path_d"];
+          auto previous_path_x = data["previous_path_x"];
+          auto previous_path_y = data["previous_path_y"];
+          double end_path_s = data["end_path_s"];
+          double end_path_d = data["end_path_d"];
 
-          // Sensor Fusion Data, a list of all other cars on the same side
-          //   of the road.
-          auto sensor_fusion = j[1]["sensor_fusion"];
+          auto sensor_fusion = data["sensor_fusion"];
 
           json msgJson;
 
@@ -62,8 +66,8 @@ int main() {
           vector<double> next_y_vals;
 
           std::cout << "car_x[" << std::fixed << std::setprecision(1)
-                    << std::setw(7) << car_x << ']' << " car_y["
-                    << std::setprecision(1) << std::setw(7) << car_y << ']'
+                    << std::setw(7) << ego.x << ']' << " car_y["
+                    << std::setprecision(1) << std::setw(7) << ego.y << ']'
                     << std::endl;
 
           if (not previous_path_x.empty()) {
@@ -77,24 +81,10 @@ int main() {
                       << std::setw(7) << previous_path_y.back() << ']'
                       << std::endl;
           }
-          // std::cout << map.waypoints_x.size() << std::endl;
-
-          // std::cout << '\r' << "s:" << car_s << "d:" << car_d
-          //          << "yaw:" << car_yaw << "   ";
-
-          // auto vec = getFrenet(car_x, car_y, car_yaw, map.waypoints_x,
-          //                     map.waypoints_y);
-
-          // std::cout << "Frenet{" << vec[0] << ',' << vec[1] << '}';
-
-          // std::cout << "Closest Waypoint"
-          //          << ClosestWaypoint(car_x, car_y, map.waypoints_x,
-          //                             map.waypoints_y)
-          //          << std::endl;
 
           double dist_inc = 0.3;
           for (int i = 0; i < 50; ++i) {
-            double next_s = car_s + (i + 1) * (dist_inc);
+            double next_s = ego.s + (i + 1) * (dist_inc);
             double next_d = 6;
 
             auto xy = getXY(next_s, next_d, map.waypoints_s, map.waypoints_x,
@@ -117,9 +107,8 @@ int main() {
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-        }  // end "telemetry" if
+        }
       } else {
-        // Manual driving
         std::string msg = "42[\"manual\",{}]";
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
