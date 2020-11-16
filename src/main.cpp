@@ -40,7 +40,7 @@ int main() {
   uWS::Hub h;
 
   MapWaypoints map(parameters::map_file, parameters::max_s);
-  double target_velocity = 49.5;  // mph
+  double target_velocity = 0;  // mph
   int lane = 1;
 
   h.onMessage([&map, &target_velocity](uWS::WebSocket<uWS::SERVER> ws,
@@ -92,10 +92,16 @@ int main() {
 
               // check if car is in front of us and gap is shorter than 30
               if ((check_car_s > future_s) && (check_car_s - future_s) < 30) {
-                target_velocity = 29.5;
-                // too_close = true;
+                // target_velocity = 29.5;
+                too_close = true;
               }
             }
+          }
+
+          if (too_close) {
+            target_velocity -= .224;
+          } else if (target_velocity < 49.4) {
+            target_velocity += .224;
           }
 
           vector<double> anchor_x;
