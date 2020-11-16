@@ -36,7 +36,7 @@ class EgoDynamics {
 int main() {
   uWS::Hub h;
 
-  Map map(parameters::map_file, parameters::max_s);
+  MapWaypoints map(parameters::map_file, parameters::max_s);
 
   int lane = 1;
   double target_velocity = 49.5;  // mph
@@ -72,6 +72,36 @@ int main() {
           double ref_y = ego.y;
           double ref_yaw = deg2rad(ego.yaw);
 
+          // Initialization when there's no previous points
+          if (prev_size < 2) {
+            // Extrapolate the previous position based on current yaw angle
+            double prev_car_x = ego.x - cos(ego.yaw);
+            double prev_car_y = ego.y - sin(ego.yaw);
+
+            anchor_x.push_back(prev_car_x);
+            anchor_x.push_back(ego.x);
+
+            anchor_y.push_back(prev_car_y);
+            anchor_y.push_back(ego.y);
+          } else {
+            ref_x = previous_path_x[prev_size - 1];
+            ref_y = previous_path_y[prev_size - 1];
+
+            double ref_x_prev = previous_path_x[prev_size - 2];
+            double ref_y_prev = previous_path_y[prev_size - 2];
+
+            ref_yaw =
+                atan2(ref_y - ref_y_prev,
+                      ref_x - ref_x_prev);  // where is this used?? Why do we
+                                            // need it? can't we use just yaw?
+
+            anchor_x.push_back(ref_x_prev);
+            anchor_x.push_back(ref_x);
+
+            anchor_y.push_back(ref_y_prev);
+            anchor_y.push_back(ref_y);
+          }
+
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
@@ -97,8 +127,7 @@ int main() {
             double next_s = ego.s + (i + 1) * (dist_inc);
             double next_d = 6;
 
-            auto xy = getXY(next_s, next_d, map.waypoints_s, map.waypoints_x,
-                            map.waypoints_y);
+            auto xy = getXY(next_s, next_d, map.s, map.x, map.y);
             next_x_vals.push_back(xy[0]);
             next_y_vals.push_back(xy[1]);
           }

@@ -5,9 +5,9 @@
 #include <string>
 #include <vector>
 
-class Map {
+class MapWaypoints {
  public:
-  Map(const std::string &map_filepath, double max_s) : max_s(max_s) {
+  MapWaypoints(const std::string &map_filepath, double max_s) : max_s(max_s) {
     read_map(map_filepath);
   }
 
@@ -16,15 +16,15 @@ class Map {
 
  public:
   double max_s{0.};
-  std::vector<double> waypoints_x;
-  std::vector<double> waypoints_y;
-  std::vector<double> waypoints_s;
-  std::vector<double> waypoints_dx;
-  std::vector<double> waypoints_dy;
+  std::vector<double> x;
+  std::vector<double> y;
+  std::vector<double> s;
+  std::vector<double> dx;
+  std::vector<double> dy;
 };
 
 
-void Map::read_map(const std::string &map_filepath) {
+void MapWaypoints::read_map(const std::string &map_filepath) {
 
   std::ifstream input_filestream(map_filepath.c_str(), std::ifstream::in);
 
@@ -35,17 +35,17 @@ void Map::read_map(const std::string &map_filepath) {
   std::string line;
   while (getline(input_filestream, line)) {
     std::istringstream iss(line);
-    double x,y;
-    float s, d_x, d_y;
-    iss >> x;
-    iss >> y;
-    iss >> s;
-    iss >> d_x;
-    iss >> d_y;
-    waypoints_x.push_back(x);
-    waypoints_y.push_back(y);
-    waypoints_s.push_back(s);
-    waypoints_dx.push_back(d_x);
-    waypoints_dy.push_back(d_y);
+    double x_,y_;
+    float s_, d_x_, d_y_;
+    iss >> x_;
+    iss >> y_;
+    iss >> s_;
+    iss >> d_x_;
+    iss >> d_y_;
+    x.push_back(x_);
+    y.push_back(y_);
+    s.push_back(s_);
+    dx.push_back(d_x_);
+    dy.push_back(d_y_);
   }
 }
