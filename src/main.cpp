@@ -70,6 +70,10 @@ int main() {
           int lane = 1;
           int prev_size = previous_path_x.size();
 
+          // if (prev_size > 0) {
+          //  car_s = end_path_s;
+          //}
+
           vector<double> anchor_x;
           vector<double> anchor_y;
 
@@ -186,7 +190,7 @@ int main() {
           std::cout << "car_x[" << std::fixed << std::setprecision(1)
                     << std::setw(7) << ego.x << ']' << " car_y["
                     << std::setprecision(1) << std::setw(7) << ego.y << ']'
-                    << std::endl;
+                    << '\n';
 
           if (not previous_path_x.empty()) {
             std::cout << std::fixed << std::setprecision(1) << "prev_x["
@@ -196,8 +200,7 @@ int main() {
                       << previous_path_x.back() << "] prev_y["
                       << std::setprecision(1) << std::setw(7)
                       << previous_path_y.front() << "->" << std::setprecision(1)
-                      << std::setw(7) << previous_path_y.back() << ']'
-                      << std::endl;
+                      << std::setw(7) << previous_path_y.back() << ']' << '\n';
           }
 
           std::cout << "next_x[" << std::fixed << std::setprecision(3)
@@ -206,7 +209,10 @@ int main() {
                     << std::setw(7) << next_x_vals.back() << "] next_y["
                     << std::setprecision(3) << std::setw(7)
                     << next_y_vals.front() << "->" << std::setprecision(3)
-                    << std::setw(7) << next_y_vals.back() << "]\n"
+                    << std::setw(7) << next_y_vals.back() << '\n';
+
+          std::cout << "end_path_s[" << end_path_s << "] end_path_d["
+                    << end_path_d << "]" << '\n'
                     << std::endl;
 
           json msgJson;
