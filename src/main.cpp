@@ -8,6 +8,8 @@
 
 //#include "Eigen-3.3/Eigen/Core"
 //#include "Eigen-3.3/Eigen/QR"
+#include <spline.h>
+
 #include <json.hpp>
 
 #include "helpers.h"
@@ -40,12 +42,13 @@ int main() {
   MapWaypoints map(parameters::map_file, parameters::max_s);
 
   int lane = 1;
-  double target_velocity = 49.5;  // mph
 
   h.onMessage([&map](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     if (valid_socket_message(length, data)) {
       auto s = hasData(data);
+
+      double target_velocity = 49.5;  // mph
 
       if (not s.empty()) {
         auto j = json::parse(s);
@@ -116,12 +119,12 @@ int main() {
               getXY(ego.s + 90, (2 + 4 * lane), map.s, map.x, map.y);
 
           anchor_x.push_back(next_wp0[0]);
-          anchor_x.push_back(next_wp0[0]);
-          anchor_x.push_back(next_wp0[0]);
+          anchor_x.push_back(next_wp1[0]);
+          anchor_x.push_back(next_wp2[0]);
 
           anchor_y.push_back(next_wp0[1]);
-          anchor_y.push_back(next_wp0[1]);
-          anchor_y.push_back(next_wp0[1]);
+          anchor_y.push_back(next_wp1[1]);
+          anchor_y.push_back(next_wp2[1]);
 
           for (int i = 0; i < anchor_x.size(); ++i) {
             // shift car reference angle to 0 degrees
@@ -134,8 +137,48 @@ int main() {
                 (shift_x * sin(0 - ref_yaw) - shift_y * cos(0 - ref_yaw));
           }
 
+          //  set (x,y) points to the spline
+          tk::spline spline;
+          spline.set_points(anchor_x, anchor_y);
+
           vector<double> next_x_vals;
           vector<double> next_y_vals;
+
+          std::cout << "prev_size:" << prev_size << std::endl;
+          // start with all of the previous path points from last frame
+          for (int i = 0; i < prev_size; ++i) {
+            next_x_vals.push_back(previous_path_x[i]);
+            next_y_vals.push_back(previous_path_y[i]);
+          }
+
+          // Calculate how to break up spline points so that we travel at our
+          // desired reference velocity
+          double target_x = 30.0;
+          double target_y = spline(target_x);
+          double target_dist =
+              sqrt((target_x) * (target_x) + (target_y) * (target_y));
+
+          double x_add_on = 0;
+
+          for (int i = 1; i <= 50 - prev_size; ++i) {
+            double N = target_dist / (.02 * target_velocity / 2.24);
+            double x_point = x_add_on + (target_x) / N;
+            double y_point = spline(x_point);
+
+            x_add_on = x_point;
+
+            double x_ref = x_point;
+            double y_ref = y_point;
+
+            x_point = x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw);
+            y_point = x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw);
+
+            x_point += ref_x;
+            y_point += ref_y;
+
+            next_x_vals.push_back(x_point);
+            next_y_vals.push_back(y_point);
+          }
 
           std::cout << "car_x[" << std::fixed << std::setprecision(1)
                     << std::setw(7) << ego.x << ']' << " car_y["
@@ -152,16 +195,6 @@ int main() {
                       << previous_path_y.front() << "->" << std::setprecision(1)
                       << std::setw(7) << previous_path_y.back() << ']'
                       << std::endl;
-          }
-
-          double dist_inc = 0.3;
-          for (int i = 0; i < 50; ++i) {
-            double next_s = ego.s + (i + 1) * (dist_inc);
-            double next_d = 6;
-
-            auto xy = getXY(next_s, next_d, map.s, map.x, map.y);
-            next_x_vals.push_back(xy[0]);
-            next_y_vals.push_back(xy[1]);
           }
 
           std::cout << "next_x[" << std::fixed << std::setprecision(3)
