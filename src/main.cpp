@@ -123,6 +123,17 @@ int main() {
           anchor_y.push_back(next_wp0[1]);
           anchor_y.push_back(next_wp0[1]);
 
+          for (int i = 0; i < anchor_x.size(); ++i) {
+            // shift car reference angle to 0 degrees
+            double shift_x = anchor_x[i] - ref_x;
+            double shift_y = anchor_y[i] - ref_y;
+
+            anchor_x[i] =
+                (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
+            anchor_y[i] =
+                (shift_x * sin(0 - ref_yaw) - shift_y * cos(0 - ref_yaw));
+          }
+
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
