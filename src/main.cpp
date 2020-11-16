@@ -64,6 +64,7 @@ int main() {
 
           auto sensor_fusion = data["sensor_fusion"];
 
+          int lane = 1;
           int prev_size = previous_path_x.size();
 
           vector<double> anchor_x;
@@ -102,6 +103,25 @@ int main() {
             anchor_y.push_back(ref_y_prev);
             anchor_y.push_back(ref_y);
           }
+
+          // In Freenet add evenly 30 spaced points ahead of the starting
+          // reference
+          vector<double> next_wp0 =
+              getXY(ego.s + 30, (2 + 4 * lane), map.s, map.x, map.y);
+
+          vector<double> next_wp1 =
+              getXY(ego.s + 60, (2 + 4 * lane), map.s, map.x, map.y);
+
+          vector<double> next_wp2 =
+              getXY(ego.s + 90, (2 + 4 * lane), map.s, map.x, map.y);
+
+          anchor_x.push_back(next_wp0[0]);
+          anchor_x.push_back(next_wp0[0]);
+          anchor_x.push_back(next_wp0[0]);
+
+          anchor_y.push_back(next_wp0[1]);
+          anchor_y.push_back(next_wp0[1]);
+          anchor_y.push_back(next_wp0[1]);
 
           vector<double> next_x_vals;
           vector<double> next_y_vals;
