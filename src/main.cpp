@@ -168,7 +168,10 @@ int main() {
           double x_add_on = 0;
 
           for (int i = 1; i <= 50 - prev_size; ++i) {
-            double N = target_dist / (.02 * target_velocity / 2.24);
+            double N =
+                target_dist / (.02 * target_velocity /
+                               2.2369);  // distance =  N (point) * 0.02
+                                         // (second/point) * v (miles/second)
             double x_point = x_add_on + (target_x) / N;
             double y_point = spline(x_point);
 
