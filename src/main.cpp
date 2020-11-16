@@ -26,8 +26,8 @@ class EgoDynamics {
     y = data["y"];
     s = data["s"];
     d = data["d"];
-    yaw = data["yaw"];
-    speed = data["speed"];
+    yaw = data["yaw"];      // degrees [positive in ccw direction]
+    speed = data["speed"];  // units ??
   }
 
   double x, y, s, d, yaw, speed;
@@ -37,6 +37,9 @@ int main() {
   uWS::Hub h;
 
   Map map(parameters::map_file, parameters::max_s);
+
+  int lane = 1;
+  double target_velocity = 49.5;  // mph
 
   h.onMessage([&map](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
@@ -60,7 +63,14 @@ int main() {
 
           auto sensor_fusion = data["sensor_fusion"];
 
-          json msgJson;
+          int prev_size = previous_path_x.size();
+
+          vector<double> anchor_x;
+          vector<double> anchor_y;
+
+          double ref_x = ego.x;
+          double ref_y = ego.y;
+          double ref_yaw = deg2rad(ego.yaw);
 
           vector<double> next_x_vals;
           vector<double> next_y_vals;
@@ -102,6 +112,7 @@ int main() {
                     << std::setw(7) << next_y_vals.back() << "]\n"
                     << std::endl;
 
+          json msgJson;
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 
