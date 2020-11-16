@@ -197,6 +197,7 @@ int main() {
 
           double x_add_on = 0;
 
+          // include acceleration for trajectory generation
           for (int i = 1; i <= 50 - prev_size; ++i) {
             double N =
                 target_dist / (.02 * target_velocity /
