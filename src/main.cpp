@@ -80,8 +80,11 @@ int main() {
           // Initialization when there's no previous points
           if (prev_size < 2) {
             // Extrapolate the previous position based on current yaw angle
-            double prev_car_x = ego.x - cos(ego.yaw);
-            double prev_car_y = ego.y - sin(ego.yaw);
+            double prev_car_x = ego.x - cos(ref_yaw);
+            double prev_car_y = ego.y - sin(ref_yaw);
+
+            std::cout << "Ego.x:" << prev_car_x << " -> " << ego.x << std::endl;
+            std::cout << "Ego.y:" << prev_car_y << " -> " << ego.y << std::endl;
 
             anchor_x.push_back(prev_car_x);
             anchor_x.push_back(ego.x);
@@ -134,7 +137,7 @@ int main() {
             anchor_x[i] =
                 (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
             anchor_y[i] =
-                (shift_x * sin(0 - ref_yaw) - shift_y * cos(0 - ref_yaw));
+                (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
           }
 
           //  set (x,y) points to the spline
