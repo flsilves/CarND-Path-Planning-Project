@@ -25,9 +25,9 @@ using std::vector;
 
 static std::ofstream telemetry_log("./telemetry.log", std::ios::app);
 
-class EgoDynamics {
+class VehicleState {
  public:
-  EgoDynamics(json telemetry_data) {
+  VehicleState(json telemetry_data) {
     x = telemetry_data["x"];
     y = telemetry_data["y"];
     s = telemetry_data["s"];
@@ -36,20 +36,31 @@ class EgoDynamics {
     speed = telemetry_data["speed"];  // units ??
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const EgoDynamics& ego) {
-    os << std::fixed << std::setprecision(2);
-    os << "[Ego] ";
-    os << "x[" << ego.x << "] ";
-    os << "y[" << ego.y << "] ";
-    os << "s[" << ego.s << "] ";
-    os << "d[" << ego.d << "] ";
-    os << "yaw[" << ego.yaw << "] ";
-    os << "speed[" << ego.speed << ']';
-    return os;
+  VehicleState(int id, double x, double y, double vx, double vy, double s,
+               double d)
+      : id(id), x(x), y(y), vx(vx), vy(vy), s(s), d(d) {
+    speed = sqrt(vx * vx + vy * vy);
+  }
+
+  int get_lane() const {
+    for (int lane = 0; lane < 3; ++lane) {
+      if (d < (2 + 4 * lane + 2) && d > (2 + 4 * lane - 2)) {
+        return lane;
+      }
+    }
+    return -1;
   }
 
  public:
-  double x, y, s, d, yaw, speed;
+  int id{-1};
+  double x{0.0};
+  double y{0.0};
+  double vx{0.0};
+  double vy{0.0};
+  double d{0.0};
+  double s{0.0};
+  double yaw{0.0};
+  double speed{0.0};
 };
 
 class Path {
@@ -76,21 +87,70 @@ class Path {
   bool empty() const { return x.empty(); }
   size_t size() const { return x.size(); }
 
-  friend std::ostream& operator<<(std::ostream& os, const Path& path) {
-    os << std::fixed << std::setprecision(2);
-    os << "[" << path.name << "] ";
-    os << "x[" << path.x.front() << " -> " << path.x.back() << "] ";
-    os << "y[" << path.y.front() << " -> " << path.y.back() << "] ";
-    os << "end_s[" << path.end_s << "] ";
-    os << "end_d[" << path.end_d << "] ";
-    os << "size[" << path.size() << ']';
-    return os;
-  }
-
  public:
   std::string name{""};
   vector<double> x, y;
   double end_s{0.0}, end_d{0.0};
+};
+
+std::ostream& operator<<(std::ostream& os, const Path& path) {
+  os << std::fixed << std::setprecision(2);
+  os << "[" << path.name << "] ";
+  os << "x[" << path.x.front() << " -> " << path.x.back() << "] ";
+  os << "y[" << path.y.front() << " -> " << path.y.back() << "] ";
+  os << "end_s[" << path.end_s << "] ";
+  os << "end_d[" << path.end_d << "] ";
+  os << "size[" << path.size() << ']';
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const VehicleState& vehicle) {
+  os << std::fixed << std::setprecision(2);
+  os << "[Ego] ";
+  os << "x[" << vehicle.x << "] ";
+  os << "y[" << vehicle.y << "] ";
+  os << "s[" << vehicle.s << "] ";
+  os << "d[" << vehicle.d << "] ";
+  os << "lane[" << vehicle.get_lane() << "] ";
+
+  os << "yaw[" << vehicle.yaw << "] ";
+  os << "speed[" << vehicle.speed << ']';
+  return os;
+}
+
+class SensorData {
+ public:
+  SensorData(json sensor_fusion) {
+    for (auto& sensor_data : sensor_fusion) {
+      auto id = sensor_data[0];
+      auto x = sensor_data[1];
+      auto y = sensor_data[2];
+      auto vx = sensor_data[3];
+      auto vy = sensor_data[4];
+      auto s = sensor_data[5];
+      auto d = sensor_data[6];
+      surrounding_vehicles.emplace_back(id, x, y, vx, vy, s, d);
+    }
+  }
+
+  bool vehicle_close(int steps_into_future, double future_s, int ego_lane) {
+    for (auto& vehicle : surrounding_vehicles) {
+      std::cout << "v_lane:" << vehicle.get_lane() << "ego_lane:" << ego_lane
+                << std::endl;
+      if (vehicle.get_lane() == ego_lane) {
+        double check_car_s =
+            vehicle.s * vehicle.speed * steps_into_future * 0.02;
+
+        if (check_car_s - future_s < 30) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+ public:
+  std::vector<VehicleState> surrounding_vehicles;
 };
 
 int main() {
@@ -113,10 +173,12 @@ int main() {
         if (event == "telemetry") {
           auto telemetry_data = j[1];
 
-          EgoDynamics ego(telemetry_data);
+          // std::cout << "json" << j << std::endl;
+
+          VehicleState ego(telemetry_data);
           Path previous_path(telemetry_data, "previous_path");
 
-          auto sensor_fusion = telemetry_data["sensor_fusion"];
+          SensorData sensor_fusion{telemetry_data["sensor_fusion"]};
 
           int prev_size = previous_path.size();
 
@@ -125,37 +187,14 @@ int main() {
             future_s = previous_path.end_s;
           }
 
-          bool too_close = false;
+          bool too_close = sensor_fusion.vehicle_close(
+              previous_path.size(), previous_path.end_s, ego.get_lane());
 
-          for (int i = 0; i < sensor_fusion.size(); i++) {
-            float d = sensor_fusion[i][6];
-            if (d < (2 + 4 * lane + 2) && d > (2 + 4 + lane - 2)) {
-              double vx = sensor_fusion[i][3];
-              double vy = sensor_fusion[i][4];
-              double check_speed =
-                  sqrt(vx * vx + vy * vy);               // current car speed
-              double check_car_s = sensor_fusion[i][5];  // current car s
-
-              check_car_s += static_cast<double>(
-                  prev_size * 0.02 *
-                  check_speed);  // where is the vehicle in last point of the
-                                 // previous preject
-
-              // check if car is in front of us and gap is shorter than 30
-              if ((check_car_s > future_s) && (check_car_s - future_s) < 30) {
-                // target_velocity = 29.5;
-                too_close = true;
-              }
-            }
+          if (too_close && lane > 0) {
+            lane = 0;
           }
 
-          if (too_close) {
-            if (lane > 0) {
-              lane = 0;
-            }
-            // target_velocity -= .224;
-
-          } else if (target_velocity < 49.5) {
+          if (target_velocity < 49.5) {
             target_velocity += .224;
           }
 
@@ -181,16 +220,18 @@ int main() {
             anchor_y.push_back(prev_car_y);
             anchor_y.push_back(ego.y);
           } else {
-            ref_x = previous_path.x[prev_size - 1];
-            ref_y = previous_path.y[prev_size - 1];
+            ref_x = previous_path.x.end()[-1];
+            ref_y = previous_path.y.end()[-1];
 
-            double ref_x_prev = previous_path.x[prev_size - 2];
-            double ref_y_prev = previous_path.y[prev_size - 2];
+            double ref_x_prev = previous_path.x.end()[-2];
+            double ref_y_prev = previous_path.y.end()[-2];
 
             ref_yaw =
                 atan2(ref_y - ref_y_prev,
                       ref_x - ref_x_prev);  // where is this used?? Why do we
                                             // need it? can't we use just yaw?
+
+            std::cout << "ref_yaw:" << rad2deg(ref_yaw) << '\n';
 
             anchor_x.push_back(ref_x_prev);
             anchor_x.push_back(ref_x);
@@ -202,13 +243,28 @@ int main() {
           // In Freenet add evenly 30 spaced points ahead of the starting
           // reference
           vector<double> next_wp0 =
-              getXY(ego.s + 30, (2 + 4 * lane), map.s, map.x, map.y);
+              getXY(ego.s + 50, (2 + 4 * lane), map.s, map.x, map.y);
 
           vector<double> next_wp1 =
-              getXY(ego.s + 60, (2 + 4 * lane), map.s, map.x, map.y);
+              getXY(ego.s + 100, (2 + 4 * lane), map.s, map.x, map.y);
 
           vector<double> next_wp2 =
-              getXY(ego.s + 90, (2 + 4 * lane), map.s, map.x, map.y);
+              getXY(ego.s + 150, (2 + 4 * lane), map.s, map.x, map.y);
+
+          // std::cout << "WP0[ x:" << next_wp0[0] << " y:" << next_wp0[1] <<
+          // "]
+          // "
+          //          << std::endl;
+          //
+          // std::cout << "WP1[ x:" << next_wp1[0] << " y:" << next_wp1[1] <<
+          // "]
+          // "
+          //          << std::endl;
+          //
+          // std::cout << "WP2[ x:" << next_wp2[0] << " y:" << next_wp2[1] <<
+          // "]
+          // "
+          //          << std::endl;
 
           anchor_x.push_back(next_wp0[0]);
           anchor_x.push_back(next_wp1[0]);
@@ -229,6 +285,21 @@ int main() {
                 (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
           }
 
+          std::cout << "AN0[ x:" << anchor_x[0] << " y:" << anchor_y[0] << "] "
+                    << std::endl;
+
+          std::cout << "AN1[ x:" << anchor_x[1] << " y:" << anchor_y[1] << "] "
+                    << std::endl;
+
+          std::cout << "AN2[ x:" << anchor_x[2] << " y:" << anchor_y[2] << "] "
+                    << std::endl;
+
+          std::cout << "AN3[ x:" << anchor_x[3] << " y:" << anchor_y[3] << "] "
+                    << std::endl;
+
+          std::cout << "AN4[ x:" << anchor_x[4] << " y:" << anchor_y[4] << "] "
+                    << std::endl;
+
           //  set (x,y) points to the spline
           tk::spline spline;
           spline.set_points(anchor_x, anchor_y);
@@ -244,26 +315,31 @@ int main() {
               sqrt((target_x) * (target_x) + (target_y) * (target_y));
 
           double x_add_on = 0;
+          double N = target_dist / (.02 * target_velocity / 2.2369);
+
+          std::cout << "N:" << N << std::endl;
 
           // include acceleration for trajectory generation
           for (int i = 1; i <= 50 - prev_size; ++i) {
-            double N =
-                target_dist / (.02 * target_velocity /
-                               2.2369);  // distance =  N (point) * 0.02
-                                         // (second/point) * v (miles/second)
+            // distance =  N (point) * 0.02
+            // (second/point) * v (miles/second)
             double x_point = x_add_on + (target_x) / N;
+
             double y_point = spline(x_point);
+
+            std::cout << "Points: x[" << x_point << "] y[" << y_point << "] "
+                      << std::endl;
 
             x_add_on = x_point;
 
             double x_ref = x_point;
             double y_ref = y_point;
 
-            x_point = x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw);
-            y_point = x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw);
+            x_point = x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw) + ref_x;
+            y_point = x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw) + ref_y;
 
-            x_point += ref_x;
-            y_point += ref_y;
+            std::cout << "Appending: x[" << x_point << "] y[" << y_point << "] "
+                      << std::endl;
 
             next_path.x.push_back(x_point);
             next_path.y.push_back(y_point);

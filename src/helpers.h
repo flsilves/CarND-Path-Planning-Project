@@ -165,4 +165,6 @@ static bool valid_socket_message(size_t length, char *socket_event) {
          socket_event[1] == '2';
 }
 
+
+
 #endif  // HELPERS_H
