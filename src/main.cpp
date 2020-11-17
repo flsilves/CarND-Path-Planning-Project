@@ -40,6 +40,10 @@ class VehicleState {
                double d)
       : id(id), x(x), y(y), vx(vx), vy(vy), s(s), d(d) {
     speed = sqrt(vx * vx + vy * vy);
+    yaw = rad2deg(atan2(vy, vx));
+    if (yaw < 0) {
+      yaw += 360;
+    }
   }
 
   int get_lane() const {
@@ -135,8 +139,9 @@ class SensorData {
   bool vehicle_close_ahead(int steps_into_future, double ego_future_s,
                            int ego_lane) {
     for (auto& vehicle : surrounding_vehicles) {
-      std::cout << "v_lane[" << vehicle.get_lane() << "] ego_lane[" << ego_lane
-                << "]" << std::endl;
+      // std::cout << "v_lane[" << vehicle.get_lane() << "] ego_lane[" <<
+      // ego_lane
+      //          << "]" << std::endl;
       if (vehicle.get_lane() == ego_lane) {
         double check_car_s =
             vehicle.s + vehicle.speed * steps_into_future *
