@@ -46,13 +46,8 @@ class VehicleState {
     }
   }
 
-  int get_lane() const {
-    for (int lane = 0; lane < 3; ++lane) {
-      if (d < (2 + 4 * lane + 2) && d > (2 + 4 * lane - 2)) {
-        return lane;
-      }
-    }
-    return -1;
+  int get_lane(double lane_width = 4.0) const {
+    return fmax(fmin(2, floor(d / lane_width)), 0);
   }
 
  public:
@@ -160,6 +155,12 @@ class SensorData {
   std::vector<VehicleState> surrounding_vehicles;
 };
 
+class TrajectoryGenerator {
+ public:
+ public:
+  std::vector<double> anchors;
+};
+
 std::ostream& operator<<(std::ostream& os, const SensorData& data) {
   for (auto& vehicle : data.surrounding_vehicles) {
     os << vehicle << '\n';
@@ -192,6 +193,8 @@ int main() {
           VehicleState ego(telemetry_data);
           Path previous_path(telemetry_data, "previous_path");
           SensorData sensor_fusion{telemetry_data["sensor_fusion"]};
+
+          TrajectoryGenerator trajectory_generator{};
 
           int prev_size = previous_path.size();
 
