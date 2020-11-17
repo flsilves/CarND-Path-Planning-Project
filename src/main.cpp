@@ -164,30 +164,23 @@ class TrajectoryGenerator {
  public:
   TrajectoryGenerator(const Path& previous_path, const VehicleState& ego_state,
                       const MapWaypoints& map)
-      : previous_path_(std::ref(previous_path)),
-        ego_state_(std::ref(ego_state)),
-        map(map) {}
-
-  void update_input(const Path& previous_path, const VehicleState& ego_state) {
-    previous_path_ = std::ref(previous_path);
-    ego_state_ = std::ref(ego_state);
-  }
+      : previous_path_(previous_path), ego_state_(ego_state), map(map) {}
 
   Path generate_trajectory(double target_velocity, int target_lane) {
     vector<double> anchor_x;
     vector<double> anchor_y;
     int lane = 0;
-    double ref_x = ego_state_.get().x;
-    double ref_y = ego_state_.get().y;
-    double ref_yaw = deg2rad(ego_state_.get().yaw);
+    double ref_x = ego_state_.x;
+    double ref_y = ego_state_.y;
+    double ref_yaw = deg2rad(ego_state_.yaw);
 
-    size_t prev_size = previous_path_.get().size();
+    size_t prev_size = previous_path_.size();
 
     // Initialization when there's no previous points
     if (prev_size < 2) {
       // Extrapolate the previous position based on current yaw angle
-      double prev_car_x = ego_state_.get().x - cos(ref_yaw);
-      double prev_car_y = ego_state_.get().y - sin(ref_yaw);
+      double prev_car_x = ego_state_.x - cos(ref_yaw);
+      double prev_car_y = ego_state_.y - sin(ref_yaw);
 
       // std::cout << "Ego.x:" << prev_car_x << " -> " << ego_state_.x
       //          << std::endl;
@@ -195,16 +188,16 @@ class TrajectoryGenerator {
       //          << std::endl;
 
       anchor_x.push_back(prev_car_x);
-      anchor_x.push_back(ego_state_.get().x);
+      anchor_x.push_back(ego_state_.x);
 
       anchor_y.push_back(prev_car_y);
-      anchor_y.push_back(ego_state_.get().y);
+      anchor_y.push_back(ego_state_.y);
     } else {
-      ref_x = previous_path_.get().x.end()[-1];
-      ref_y = previous_path_.get().y.end()[-1];
+      ref_x = previous_path_.x.end()[-1];
+      ref_y = previous_path_.y.end()[-1];
 
-      double ref_x_prev = previous_path_.get().x.end()[-2];
-      double ref_y_prev = previous_path_.get().y.end()[-2];
+      double ref_x_prev = previous_path_.x.end()[-2];
+      double ref_y_prev = previous_path_.y.end()[-2];
 
       ref_yaw = atan2(ref_y - ref_y_prev,
                       ref_x - ref_x_prev);  // where is this used?? Why do we
@@ -221,14 +214,14 @@ class TrajectoryGenerator {
 
     // In Freenet add evenly 30 spaced points ahead of the starting
     // reference
-    vector<double> next_wp0 = getXY(ego_state_.get().s + 50,
-                                    (2 + 4 * target_lane), map.s, map.x, map.y);
+    vector<double> next_wp0 =
+        getXY(ego_state_.s + 50, (2 + 4 * target_lane), map.s, map.x, map.y);
 
-    vector<double> next_wp1 = getXY(ego_state_.get().s + 100,
-                                    (2 + 4 * target_lane), map.s, map.x, map.y);
+    vector<double> next_wp1 =
+        getXY(ego_state_.s + 100, (2 + 4 * target_lane), map.s, map.x, map.y);
 
-    vector<double> next_wp2 = getXY(ego_state_.get().s + 150,
-                                    (2 + 4 * target_lane), map.s, map.x, map.y);
+    vector<double> next_wp2 =
+        getXY(ego_state_.s + 150, (2 + 4 * target_lane), map.s, map.x, map.y);
 
     anchor_x.push_back(next_wp0[0]);
     anchor_x.push_back(next_wp1[0]);
@@ -251,7 +244,7 @@ class TrajectoryGenerator {
     spline.set_points(anchor_x, anchor_y);
 
     // start with all of the previous path points from last frame
-    generated_path = previous_path_.get();
+    generated_path = previous_path_;
 
     // Calculate how to break up spline points so that we travel at our
     // desired reference velocity
@@ -299,8 +292,8 @@ class TrajectoryGenerator {
 
  public:
   Path generated_path{"generated"};
-  std::reference_wrapper<const Path> previous_path_;
-  std::reference_wrapper<const VehicleState> ego_state_;
+  const Path& previous_path_;
+  const VehicleState& ego_state_;
   MapWaypoints map;
 };
 
