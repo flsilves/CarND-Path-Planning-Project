@@ -106,13 +106,12 @@ std::ostream& operator<<(std::ostream& os, const Path& path) {
 
 std::ostream& operator<<(std::ostream& os, const VehicleState& vehicle) {
   os << std::fixed << std::setprecision(2);
-  os << "[Ego] ";
+  os << "id[" << vehicle.id << "] ";
   os << "x[" << vehicle.x << "] ";
   os << "y[" << vehicle.y << "] ";
   os << "s[" << vehicle.s << "] ";
   os << "d[" << vehicle.d << "] ";
   os << "lane[" << vehicle.get_lane() << "] ";
-
   os << "yaw[" << vehicle.yaw << "] ";
   os << "speed[" << vehicle.speed << ']';
   return os;
@@ -121,9 +120,6 @@ std::ostream& operator<<(std::ostream& os, const VehicleState& vehicle) {
 class SensorData {
  public:
   SensorData(json sensor_fusion) {
-    // std::cout << sensor_fusion << '\n';
-    // std::cout << "sensor_fusion_size:" << sensor_fusion.size() << '\n';
-
     for (auto& sensor_data : sensor_fusion) {
       auto id = sensor_data[0];
       auto x = sensor_data[1];
@@ -136,15 +132,18 @@ class SensorData {
     }
   }
 
-  bool vehicle_close(int steps_into_future, double future_s, int ego_lane) {
+  bool vehicle_close_ahead(int steps_into_future, double ego_future_s,
+                           int ego_lane) {
     for (auto& vehicle : surrounding_vehicles) {
       std::cout << "v_lane[" << vehicle.get_lane() << "] ego_lane[" << ego_lane
                 << "]" << std::endl;
       if (vehicle.get_lane() == ego_lane) {
         double check_car_s =
-            vehicle.s + vehicle.speed * steps_into_future * 0.02;
+            vehicle.s + vehicle.speed * steps_into_future *
+                            0.02;  // TODO use parameter <time per point>
 
-        if ((check_car_s > future_s) && (check_car_s - future_s < 30)) {
+        if ((check_car_s > ego_future_s) &&
+            (check_car_s - ego_future_s < 30)) {  // TODO: use parameter gap
           return true;
         }
       }
@@ -155,6 +154,13 @@ class SensorData {
  public:
   std::vector<VehicleState> surrounding_vehicles;
 };
+
+std::ostream& operator<<(std::ostream& os, const SensorData& data) {
+  for (auto& vehicle : data.surrounding_vehicles) {
+    os << vehicle << '\n';
+  }
+  return os;
+}
 
 int main() {
   uWS::Hub h;
@@ -180,13 +186,14 @@ int main() {
 
           VehicleState ego(telemetry_data);
           Path previous_path(telemetry_data, "previous_path");
-
           SensorData sensor_fusion{telemetry_data["sensor_fusion"]};
 
           int prev_size = previous_path.size();
 
-          bool too_close = sensor_fusion.vehicle_close(
+          bool too_close = sensor_fusion.vehicle_close_ahead(
               previous_path.size(), previous_path.end_s, ego.get_lane());
+
+          std::cout << sensor_fusion << '\n';
 
           if (too_close && lane > 0) {
             lane = 0;
