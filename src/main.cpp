@@ -27,16 +27,57 @@ static std::ofstream telemetry_log("./telemetry.log", std::ios::app);
 
 class EgoDynamics {
  public:
-  EgoDynamics(json data) {
-    x = data["x"];
-    y = data["y"];
-    s = data["s"];
-    d = data["d"];
-    yaw = data["yaw"];      // degrees [positive in ccw direction]
-    speed = data["speed"];  // units ??
+  EgoDynamics(json telemetry_data) {
+    x = telemetry_data["x"];
+    y = telemetry_data["y"];
+    s = telemetry_data["s"];
+    d = telemetry_data["d"];
+    yaw = telemetry_data["yaw"];      // degrees [positive in ccw direction]
+    speed = telemetry_data["speed"];  // units ??
   }
 
+  friend std::ostream& operator<<(std::ostream& os, const EgoDynamics& ego) {
+    os << std::fixed << std::setprecision(2);
+    os << "Ego# ";
+    os << "x[" << ego.x << "] ";
+    os << "y[" << ego.y << "] ";
+    os << "s[" << ego.s << "] ";
+    os << "d[" << ego.d << "] ";
+    os << "yaw[" << ego.yaw << "] ";
+    os << "speed[" << ego.speed << ']';
+    return os;
+  }
+
+ public:
   double x, y, s, d, yaw, speed;
+};
+
+class Path {
+ public:
+  Path(json telemetry_data) {
+    x = telemetry_data["previous_path_x"].get<vector<double>>();
+    y = telemetry_data["previous_path_y"].get<vector<double>>();
+
+    if (x.size() != y.size()) {
+      throw std::runtime_error("<Path::ctor>: x and y have different lengths");
+    }
+  }
+
+  bool empty() const { return x.empty(); }
+  size_t size() const { return x.size(); }
+
+  friend std::ostream& operator<<(std::ostream& os, const Path& path) {
+    os << std::fixed << std::setprecision(2);
+    os << "Path# ";
+    os << "x[" << path.x.front() << " -> " << path.x.back() << "] ";
+    os << "y[" << path.y.front() << " -> " << path.y.back() << "] ";
+    os << "size[" << path.size() << ']';
+    return os;
+  }
+
+ public:
+  vector<double> x;
+  vector<double> y;
 };
 
 int main() {
@@ -47,32 +88,30 @@ int main() {
   int lane = 1;
 
   h.onMessage([&map, &target_velocity, &lane](uWS::WebSocket<uWS::SERVER> ws,
-                                              char *data, size_t length,
+                                              char* data, size_t length,
                                               uWS::OpCode opCode) {
     if (valid_socket_message(length, data)) {
       auto s = hasData(data);
 
       if (not s.empty()) {
         auto j = json::parse(s);
-
-        string event = j[0].get<string>();
+        auto event = j[0].get<string>();
 
         if (event == "telemetry") {
-          auto data = j[1];
+          auto telemetry_data = j[1];
 
-          EgoDynamics ego(data);
+          EgoDynamics ego(telemetry_data);
+          Path previous_path(telemetry_data);
 
-          auto previous_path_x = data["previous_path_x"];
-          auto previous_path_y = data["previous_path_y"];
-          double end_path_s = data["end_path_s"];
-          double end_path_d = data["end_path_d"];
+          double end_path_s = telemetry_data["end_path_s"];
+          double end_path_d = telemetry_data["end_path_d"];
 
-          auto sensor_fusion = data["sensor_fusion"];
+          auto sensor_fusion = telemetry_data["sensor_fusion"];
 
-          int prev_size = previous_path_x.size();
+          int prev_size = previous_path.size();
 
           double future_s;
-          if (prev_size > 0) {  // ?
+          if (prev_size > 0) {
             future_s = end_path_s;
           }
 
@@ -132,11 +171,11 @@ int main() {
             anchor_y.push_back(prev_car_y);
             anchor_y.push_back(ego.y);
           } else {
-            ref_x = previous_path_x[prev_size - 1];
-            ref_y = previous_path_y[prev_size - 1];
+            ref_x = previous_path.x[prev_size - 1];
+            ref_y = previous_path.y[prev_size - 1];
 
-            double ref_x_prev = previous_path_x[prev_size - 2];
-            double ref_y_prev = previous_path_y[prev_size - 2];
+            double ref_x_prev = previous_path.x[prev_size - 2];
+            double ref_y_prev = previous_path.y[prev_size - 2];
 
             ref_yaw =
                 atan2(ref_y - ref_y_prev,
@@ -189,9 +228,10 @@ int main() {
 
           std::cout << "prev_size:" << prev_size << std::endl;
           // start with all of the previous path points from last frame
+
           for (int i = 0; i < prev_size; ++i) {
-            next_x_vals.push_back(previous_path_x[i]);
-            next_y_vals.push_back(previous_path_y[i]);
+            next_x_vals.push_back(previous_path.x[i]);
+            next_y_vals.push_back(previous_path.y[i]);
           }
 
           // Calculate how to break up spline points so that we travel at our
@@ -227,20 +267,10 @@ int main() {
             next_y_vals.push_back(y_point);
           }
 
-          std::cout << "car_x[" << std::fixed << std::setprecision(1)
-                    << std::setw(7) << ego.x << ']' << " car_y["
-                    << std::setprecision(1) << std::setw(7) << ego.y << ']'
-                    << '\n';
+          std::cout << ego << std::endl;
 
-          if (not previous_path_x.empty()) {
-            std::cout << std::fixed << std::setprecision(1) << "prev_x["
-                      << std::fixed << std::setprecision(1) << std::setw(7)
-                      << std::setprecision(1) << previous_path_x.front() << "->"
-                      << std::setprecision(1) << std::setw(7)
-                      << previous_path_x.back() << "] prev_y["
-                      << std::setprecision(1) << std::setw(7)
-                      << previous_path_y.front() << "->" << std::setprecision(1)
-                      << std::setw(7) << previous_path_y.back() << ']' << '\n';
+          if (not previous_path.empty()) {
+            std::cout << previous_path << std::endl;
           }
 
           std::cout << "next_x[" << std::fixed << std::setprecision(3)
@@ -274,7 +304,7 @@ int main() {
   });
 
   h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,
-                         char *message, size_t length) {
+                         char* message, size_t length) {
     ws.close();
     std::cout << "Disconnected" << std::endl;
   });
