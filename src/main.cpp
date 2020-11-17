@@ -121,6 +121,9 @@ std::ostream& operator<<(std::ostream& os, const VehicleState& vehicle) {
 class SensorData {
  public:
   SensorData(json sensor_fusion) {
+    // std::cout << sensor_fusion << '\n';
+    // std::cout << "sensor_fusion_size:" << sensor_fusion.size() << '\n';
+
     for (auto& sensor_data : sensor_fusion) {
       auto id = sensor_data[0];
       auto x = sensor_data[1];
@@ -135,13 +138,13 @@ class SensorData {
 
   bool vehicle_close(int steps_into_future, double future_s, int ego_lane) {
     for (auto& vehicle : surrounding_vehicles) {
-      std::cout << "v_lane:" << vehicle.get_lane() << "ego_lane:" << ego_lane
-                << std::endl;
+      std::cout << "v_lane[" << vehicle.get_lane() << "] ego_lane[" << ego_lane
+                << "]" << std::endl;
       if (vehicle.get_lane() == ego_lane) {
         double check_car_s =
-            vehicle.s * vehicle.speed * steps_into_future * 0.02;
+            vehicle.s + vehicle.speed * steps_into_future * 0.02;
 
-        if (check_car_s - future_s < 30) {
+        if ((check_car_s > future_s) && (check_car_s - future_s < 30)) {
           return true;
         }
       }
@@ -181,11 +184,6 @@ int main() {
           SensorData sensor_fusion{telemetry_data["sensor_fusion"]};
 
           int prev_size = previous_path.size();
-
-          double future_s;
-          if (prev_size > 0) {
-            future_s = previous_path.end_s;
-          }
 
           bool too_close = sensor_fusion.vehicle_close(
               previous_path.size(), previous_path.end_s, ego.get_lane());
@@ -285,20 +283,25 @@ int main() {
                 (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
           }
 
-          std::cout << "AN0[ x:" << anchor_x[0] << " y:" << anchor_y[0] << "] "
-                    << std::endl;
-
-          std::cout << "AN1[ x:" << anchor_x[1] << " y:" << anchor_y[1] << "] "
-                    << std::endl;
-
-          std::cout << "AN2[ x:" << anchor_x[2] << " y:" << anchor_y[2] << "] "
-                    << std::endl;
-
-          std::cout << "AN3[ x:" << anchor_x[3] << " y:" << anchor_y[3] << "] "
-                    << std::endl;
-
-          std::cout << "AN4[ x:" << anchor_x[4] << " y:" << anchor_y[4] << "] "
-                    << std::endl;
+          // std::cout << "AN0[ x:" << anchor_x[0] << " y:" << anchor_y[0] << "]
+          // "
+          //          << std::endl;
+          //
+          // std::cout << "AN1[ x:" << anchor_x[1] << " y:" << anchor_y[1] << "]
+          // "
+          //          << std::endl;
+          //
+          // std::cout << "AN2[ x:" << anchor_x[2] << " y:" << anchor_y[2] << "]
+          // "
+          //          << std::endl;
+          //
+          // std::cout << "AN3[ x:" << anchor_x[3] << " y:" << anchor_y[3] << "]
+          // "
+          //          << std::endl;
+          //
+          // std::cout << "AN4[ x:" << anchor_x[4] << " y:" << anchor_y[4] << "]
+          // "
+          //          << std::endl;
 
           //  set (x,y) points to the spline
           tk::spline spline;
@@ -317,7 +320,7 @@ int main() {
           double x_add_on = 0;
           double N = target_dist / (.02 * target_velocity / 2.2369);
 
-          std::cout << "N:" << N << std::endl;
+          // std::cout << "N:" << N << std::endl;
 
           // include acceleration for trajectory generation
           for (int i = 1; i <= 50 - prev_size; ++i) {
@@ -327,8 +330,8 @@ int main() {
 
             double y_point = spline(x_point);
 
-            std::cout << "Points: x[" << x_point << "] y[" << y_point << "] "
-                      << std::endl;
+            // std::cout << "Points: x[" << x_point << "] y[" << y_point << "] "
+            //          << std::endl;
 
             x_add_on = x_point;
 
@@ -338,8 +341,9 @@ int main() {
             x_point = x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw) + ref_x;
             y_point = x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw) + ref_y;
 
-            std::cout << "Appending: x[" << x_point << "] y[" << y_point << "] "
-                      << std::endl;
+            // std::cout << "Appending: x[" << x_point << "] y[" << y_point <<
+            // "] "
+            //          << std::endl;
 
             next_path.x.push_back(x_point);
             next_path.y.push_back(y_point);
