@@ -38,7 +38,7 @@ class EgoDynamics {
 
   friend std::ostream& operator<<(std::ostream& os, const EgoDynamics& ego) {
     os << std::fixed << std::setprecision(2);
-    os << "Ego# ";
+    os << "[Ego] ";
     os << "x[" << ego.x << "] ";
     os << "y[" << ego.y << "] ";
     os << "s[" << ego.s << "] ";
@@ -57,27 +57,34 @@ class Path {
   Path(json telemetry_data) {
     x = telemetry_data["previous_path_x"].get<vector<double>>();
     y = telemetry_data["previous_path_y"].get<vector<double>>();
+    end_s = telemetry_data["end_path_s"];
+    end_d = telemetry_data["end_path_d"];
 
     if (x.size() != y.size()) {
       throw std::runtime_error("<Path::ctor>: x and y have different lengths");
     }
   }
 
+  Path(const Path& other)
+      : x(other.x), y(other.y), end_s(other.end_s), end_d(other.end_d) {}
+
   bool empty() const { return x.empty(); }
   size_t size() const { return x.size(); }
 
   friend std::ostream& operator<<(std::ostream& os, const Path& path) {
     os << std::fixed << std::setprecision(2);
-    os << "Path# ";
+    os << "[Path] ";
     os << "x[" << path.x.front() << " -> " << path.x.back() << "] ";
     os << "y[" << path.y.front() << " -> " << path.y.back() << "] ";
+    os << "end_s[" << path.end_s << "] ";
+    os << "end_d[" << path.end_d << "] ";
     os << "size[" << path.size() << ']';
     return os;
   }
 
  public:
-  vector<double> x;
-  vector<double> y;
+  vector<double> x, y;
+  double end_s, end_d;
 };
 
 int main() {
@@ -103,16 +110,13 @@ int main() {
           EgoDynamics ego(telemetry_data);
           Path previous_path(telemetry_data);
 
-          double end_path_s = telemetry_data["end_path_s"];
-          double end_path_d = telemetry_data["end_path_d"];
-
           auto sensor_fusion = telemetry_data["sensor_fusion"];
 
           int prev_size = previous_path.size();
 
           double future_s;
           if (prev_size > 0) {
-            future_s = end_path_s;
+            future_s = previous_path.end_s;
           }
 
           bool too_close = false;
@@ -229,10 +233,7 @@ int main() {
           std::cout << "prev_size:" << prev_size << std::endl;
           // start with all of the previous path points from last frame
 
-          for (int i = 0; i < prev_size; ++i) {
-            next_x_vals.push_back(previous_path.x[i]);
-            next_y_vals.push_back(previous_path.y[i]);
-          }
+          Path next_path{previous_path};
 
           // Calculate how to break up spline points so that we travel at our
           // desired reference velocity
@@ -263,8 +264,8 @@ int main() {
             x_point += ref_x;
             y_point += ref_y;
 
-            next_x_vals.push_back(x_point);
-            next_y_vals.push_back(y_point);
+            next_path.x.push_back(x_point);
+            next_path.y.push_back(y_point);
           }
 
           std::cout << ego << std::endl;
@@ -273,21 +274,9 @@ int main() {
             std::cout << previous_path << std::endl;
           }
 
-          std::cout << "next_x[" << std::fixed << std::setprecision(3)
-                    << std::setw(7) << std::setprecision(3)
-                    << next_x_vals.front() << "->" << std::setprecision(3)
-                    << std::setw(7) << next_x_vals.back() << "] next_y["
-                    << std::setprecision(3) << std::setw(7)
-                    << next_y_vals.front() << "->" << std::setprecision(3)
-                    << std::setw(7) << next_y_vals.back() << '\n';
-
-          std::cout << "end_path_s[" << end_path_s << "] end_path_d["
-                    << end_path_d << "]" << '\n'
-                    << std::endl;
-
           json msgJson;
-          msgJson["next_x"] = next_x_vals;
-          msgJson["next_y"] = next_y_vals;
+          msgJson["next_x"] = next_path.x;
+          msgJson["next_y"] = next_path.y;
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
