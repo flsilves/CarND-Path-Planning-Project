@@ -54,7 +54,8 @@ class EgoDynamics {
 
 class Path {
  public:
-  Path(json telemetry_data) {
+  Path(json telemetry_data, const std::string& path_name = "Path") {
+    name = path_name;
     x = telemetry_data["previous_path_x"].get<vector<double>>();
     y = telemetry_data["previous_path_y"].get<vector<double>>();
     end_s = telemetry_data["end_path_s"];
@@ -65,15 +66,19 @@ class Path {
     }
   }
 
-  Path(const Path& other)
-      : x(other.x), y(other.y), end_s(other.end_s), end_d(other.end_d) {}
+  Path(const Path& other, const std::string& path_name = "Path")
+      : name(path_name),
+        x(other.x),
+        y(other.y),
+        end_s(other.end_s),
+        end_d(other.end_d) {}
 
   bool empty() const { return x.empty(); }
   size_t size() const { return x.size(); }
 
   friend std::ostream& operator<<(std::ostream& os, const Path& path) {
     os << std::fixed << std::setprecision(2);
-    os << "[Path] ";
+    os << "[" << path.name << "] ";
     os << "x[" << path.x.front() << " -> " << path.x.back() << "] ";
     os << "y[" << path.y.front() << " -> " << path.y.back() << "] ";
     os << "end_s[" << path.end_s << "] ";
@@ -83,8 +88,9 @@ class Path {
   }
 
  public:
+  std::string name{""};
   vector<double> x, y;
-  double end_s, end_d;
+  double end_s{0.0}, end_d{0.0};
 };
 
 int main() {
@@ -108,7 +114,7 @@ int main() {
           auto telemetry_data = j[1];
 
           EgoDynamics ego(telemetry_data);
-          Path previous_path(telemetry_data);
+          Path previous_path(telemetry_data, "previous_path");
 
           auto sensor_fusion = telemetry_data["sensor_fusion"];
 
@@ -227,13 +233,8 @@ int main() {
           tk::spline spline;
           spline.set_points(anchor_x, anchor_y);
 
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
-
-          std::cout << "prev_size:" << prev_size << std::endl;
           // start with all of the previous path points from last frame
-
-          Path next_path{previous_path};
+          Path next_path{previous_path, "next"};
 
           // Calculate how to break up spline points so that we travel at our
           // desired reference velocity
@@ -268,11 +269,13 @@ int main() {
             next_path.y.push_back(y_point);
           }
 
-          std::cout << ego << std::endl;
+          std::cout << ego << '\n';
 
           if (not previous_path.empty()) {
-            std::cout << previous_path << std::endl;
+            std::cout << previous_path << '\n';
           }
+
+          std::cout << next_path << '\n' << std::endl;
 
           json msgJson;
           msgJson["next_x"] = next_path.x;
