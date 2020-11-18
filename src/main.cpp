@@ -91,7 +91,7 @@ class Path {
     y.insert(y.end(), y_extra.begin(), y_extra.end());
   }
 
-  void trim(size_t new_size) {
+  void trim(std::size_t new_size) {
     if (new_size > x.size()) {
       x.resize(new_size);
       y.resize(new_size);
@@ -99,7 +99,7 @@ class Path {
   }
 
   bool empty() const { return x.empty(); }
-  size_t size() const { return x.size(); }
+  std::size_t size() const { return x.size(); }
 
  public:
   std::string name{""};
@@ -135,14 +135,15 @@ class SensorData {
  public:
   SensorData(json sensor_fusion) {
     for (auto& sensor_data : sensor_fusion) {
-      auto id = sensor_data[0];
-      auto x = sensor_data[1];
-      auto y = sensor_data[2];
-      auto vx = sensor_data[3];
-      auto vy = sensor_data[4];
-      auto s = sensor_data[5];
-      auto d = sensor_data[6];
-      surrounding_vehicles.emplace_back(id, x, y, vx, vy, s, d);
+      double id = sensor_data[0];
+      double x = sensor_data[1];
+      double y = sensor_data[2];
+      double vx = sensor_data[3];
+      double vy = sensor_data[4];
+      double s = sensor_data[5];
+      double d = sensor_data[6];
+      surrounding_vehicles.emplace_back(id, x, y, vx / 0.44704, vy / 0.44704, s,
+                                        d);
     }
   }
 
@@ -161,7 +162,7 @@ class SensorData {
           std::cout << "Vehicle in front at:" << (check_car_s - ego_future_s)
                     << "v:" << vehicle.speed << std::endl;
           if (check_car_s - ego_future_s < 60) {
-            return vehicle.speed + 12.5;
+            return vehicle.speed;
           }
         }
       }
@@ -232,7 +233,7 @@ class TrajectoryGenerator {
     anchors_y.clear();
     ref_yaw = deg2rad(ego_state_.yaw);
 
-    size_t prev_size = previous_path_.size();
+    std::size_t prev_size = previous_path_.size();
 
     if (prev_size < 2) {
       anchors_x.push_back(ego_state_.x - cos(ref_yaw));
@@ -323,7 +324,7 @@ int main() {
   h.onMessage([&map, &target_velocity, &lane, &previous_path, &ego_state,
                &trajectory_generator,
                &retrigger](uWS::WebSocket<uWS::SERVER> ws, char* data,
-                           size_t length, uWS::OpCode opCode) {
+                           std::size_t length, uWS::OpCode opCode) {
     if (valid_socket_message(length, data)) {
       auto s = hasData(data);
 
@@ -334,8 +335,24 @@ int main() {
         if (event == "telemetry") {
           auto telemetry_data = j[1];
 
+          VehicleState prev_ego{ego_state};
+
           ego_state.update(telemetry_data);
           previous_path.update(telemetry_data);
+
+          double delta_x = fabs(ego_state.x - prev_ego.x);
+          double delta_y = fabs(ego_state.y - prev_ego.y);
+
+          double distance_traveled =
+              sqrt(delta_x * delta_x + delta_y * delta_y);
+
+          double average_speed =
+              (ego_state.speed / 2 + prev_ego.speed / 2) * 0.44704;
+
+          double time = distance_traveled / average_speed;
+
+          std::cout << "time[" << time << "] average_speed[" << average_speed
+                    << "] d[" << distance_traveled << "]" << std::endl;
 
           SensorData sensor_fusion{telemetry_data["sensor_fusion"]};
 
@@ -344,19 +361,17 @@ int main() {
           double front_speed = sensor_fusion.vehicle_close_ahead(
               previous_path.size(), previous_path.end_s, ego_state.get_lane());
 
-          std::cout << sensor_fusion << '\n';
+          // std::cout << sensor_fusion << '\n';
 
           if (front_speed > 1.0 && front_speed < target_velocity) {
             if (front_speed < target_velocity) {
-              target_velocity -= .224 / 2;
+              target_velocity -= .224;
             } else {
-              target_velocity += .224 / 2;
+              target_velocity += .224;
             }
 
-            retrigger = false;
           } else if (target_velocity < 49.5) {
-            target_velocity += .224 * 4;
-            retrigger = false;
+            target_velocity += .224 * 2;
           }
 
           std::cout << ego_state << '\n';
@@ -388,7 +403,7 @@ int main() {
   });
 
   h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,
-                         char* message, size_t length) {
+                         char* message, std::size_t length) {
     ws.close();
     std::cout << "Disconnected" << std::endl;
   });

@@ -160,7 +160,7 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
   return {x,y};
 }
 
-static bool valid_socket_message(size_t length, char *socket_event) {
+static bool valid_socket_message(std::size_t length, char *socket_event) {
   return length && length > 2 && socket_event[0] == '4' &&
          socket_event[1] == '2';
 }
