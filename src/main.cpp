@@ -94,6 +94,13 @@ class Path {
     y.insert(y.end(), y_extra.begin(), y_extra.end());
   }
 
+  void trim(size_t new_size) {
+    if (new_size > x.size()) {
+      x.resize(new_size);
+      y.resize(new_size);
+    }
+  }
+
   bool empty() const { return x.empty(); }
   size_t size() const { return x.size(); }
 
@@ -173,20 +180,18 @@ class TrajectoryGenerator {
       : previous_path_(previous_path), ego_state_(ego_state), map(map) {}
 
   Path generate_trajectory(double target_velocity, int target_lane) {
-    const double anchor_spacement = 40.0;
+    const double anchor_spacement = 30.0;
     const unsigned extra_anchors = 3;
 
     anchors_init();
-    // anchors_trim();
+    anchors_trim();
     anchors_add(anchor_spacement, extra_anchors, target_lane);
     anchors_recenter();
 
-    tk::spline spline;
     spline.set_points(anchors_x, anchors_y);
 
     generated_path = previous_path_;
-
-    std::cout << generated_path.size() << std::endl;
+    // generated_path.trim(20);
 
     // generated_path.extend()
     // Calculate how to break up spline points so that we travel at our
@@ -274,7 +279,7 @@ class TrajectoryGenerator {
                    int target_lane) {
     for (auto i = 1u; i <= extra_anchors; ++i) {
       auto next_anchor = getXY(ego_state_.s + (i) * (anchor_spacement),
-                               (2. + 4. * target_lane), map.s, map.x, map.y);
+                               (2 + 4 * target_lane), map.s, map.x, map.y);
 
       anchors_x.emplace_back(next_anchor[0]);
       anchors_y.emplace_back(next_anchor[1]);
@@ -307,6 +312,7 @@ class TrajectoryGenerator {
   const Path& previous_path_;
   const VehicleState& ego_state_;
   MapWaypoints map;
+  tk::spline spline;
 };
 
 std::ostream& operator<<(std::ostream& os, const SensorData& data) {
