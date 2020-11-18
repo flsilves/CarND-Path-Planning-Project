@@ -160,9 +160,12 @@ class SensorData {
             vehicle.s + vehicle.speed * steps_into_future *
                             0.02;  // TODO use parameter <time per point>
 
-        if ((check_car_s > ego_future_s) &&
-            (check_car_s - ego_future_s < 30)) {  // TODO: use parameter gap
-          return true;
+        if (check_car_s > ego_future_s) {  // TODO: use parameter gap
+          // std::cout << "Vehicle in front at:" << (check_car_s - ego_future_s)
+          //          << std::endl;
+          if (check_car_s - ego_future_s < 30) {
+            return true;
+          }
         }
       }
     }
