@@ -88,6 +88,12 @@ class Path {
     }
   }
 
+  void extend(const std::vector<double> x_extra,
+              const std::vector<double> y_extra) {
+    x.insert(x.end(), x_extra.begin(), x_extra.end());
+    y.insert(y.end(), y_extra.begin(), y_extra.end());
+  }
+
   bool empty() const { return x.empty(); }
   size_t size() const { return x.size(); }
 
@@ -167,47 +173,22 @@ class TrajectoryGenerator {
       : previous_path_(previous_path), ego_state_(ego_state), map(map) {}
 
   Path generate_trajectory(double target_velocity, int target_lane) {
-    generate_start_anchors();
-    double ref_x = start_anchor_x.at(1);
-    double ref_y = start_anchor_y.at(1);
+    const double anchor_spacement = 40.0;
+    const unsigned extra_anchors = 3;
 
-    size_t prev_size = previous_path_.size();
-
-    std::vector<double> anchor_x{start_anchor_x};
-    std::vector<double> anchor_y{start_anchor_y};
-
-    vector<double> next_wp0 =
-        getXY(ego_state_.s + 50, (2 + 4 * target_lane), map.s, map.x, map.y);
-
-    vector<double> next_wp1 =
-        getXY(ego_state_.s + 100, (2 + 4 * target_lane), map.s, map.x, map.y);
-
-    vector<double> next_wp2 =
-        getXY(ego_state_.s + 150, (2 + 4 * target_lane), map.s, map.x, map.y);
-
-    anchor_x.push_back(next_wp0[0]);
-    anchor_x.push_back(next_wp1[0]);
-    anchor_x.push_back(next_wp2[0]);
-
-    anchor_y.push_back(next_wp0[1]);
-    anchor_y.push_back(next_wp1[1]);
-    anchor_y.push_back(next_wp2[1]);
-
-    for (int i = 0; i < anchor_x.size(); ++i) {
-      // shift car reference angle to 0 degrees
-      double shift_x = anchor_x[i] - ref_x;
-      double shift_y = anchor_y[i] - ref_y;
-
-      anchor_x[i] = (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
-      anchor_y[i] = (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
-    }
+    anchors_init();
+    // anchors_trim();
+    anchors_add(anchor_spacement, extra_anchors, target_lane);
+    anchors_recenter();
 
     tk::spline spline;
-    spline.set_points(anchor_x, anchor_y);
+    spline.set_points(anchors_x, anchors_y);
 
-    // start with all of the previous path points from last frame
     generated_path = previous_path_;
 
+    std::cout << generated_path.size() << std::endl;
+
+    // generated_path.extend()
     // Calculate how to break up spline points so that we travel at our
     // desired reference velocity
     double target_x = 30.0;
@@ -218,6 +199,7 @@ class TrajectoryGenerator {
     double x_add_on = 0;
     double N = target_dist / (.02 * target_velocity / 2.2369);
 
+    auto prev_size = previous_path_.size();
     // std::cout << "N:" << N << std::endl;
 
     // include acceleration for trajectory generation
@@ -251,23 +233,23 @@ class TrajectoryGenerator {
   }
 
  private:
-  void generate_start_anchors() {
-    start_anchor_x.clear();
-    start_anchor_y.clear();
+  void anchors_init() {
+    anchors_x.clear();
+    anchors_y.clear();
     ref_yaw = deg2rad(ego_state_.yaw);
 
     size_t prev_size = previous_path_.size();
 
     // Initialization when there's no previous points
     if (prev_size < 2) {
-      start_anchor_x.push_back(ego_state_.x - cos(ref_yaw));
-      start_anchor_x.push_back(ego_state_.x);
+      anchors_x.push_back(ego_state_.x - cos(ref_yaw));
+      anchors_x.push_back(ego_state_.x);
 
-      start_anchor_y.push_back(ego_state_.y - sin(ref_yaw));
-      start_anchor_y.push_back(ego_state_.y);
+      anchors_y.push_back(ego_state_.y - sin(ref_yaw));
+      anchors_y.push_back(ego_state_.y);
     } else {
-      double ref_x = previous_path_.x.end()[-1];
-      double ref_y = previous_path_.y.end()[-1];
+      ref_x = previous_path_.x.end()[-1];
+      ref_y = previous_path_.y.end()[-1];
 
       double ref_x_prev = previous_path_.x.end()[-2];
       double ref_y_prev = previous_path_.y.end()[-2];
@@ -278,19 +260,50 @@ class TrajectoryGenerator {
 
       // std::cout << "ref_yaw:" << rad2deg(ref_yaw) << '\n';
 
-      start_anchor_x.push_back(ref_x_prev);
-      start_anchor_x.push_back(ref_x);
+      anchors_x.push_back(ref_x_prev);
+      anchors_x.push_back(ref_x);
 
-      start_anchor_y.push_back(ref_y_prev);
-      start_anchor_y.push_back(ref_y);
+      anchors_y.push_back(ref_y_prev);
+      anchors_y.push_back(ref_y);
+    }
+    ref_x = anchors_x.at(1);
+    ref_y = anchors_y.at(1);
+  }
+
+  void anchors_add(double anchor_spacement, unsigned extra_anchors,
+                   int target_lane) {
+    for (auto i = 1u; i <= extra_anchors; ++i) {
+      auto next_anchor = getXY(ego_state_.s + (i) * (anchor_spacement),
+                               (2. + 4. * target_lane), map.s, map.x, map.y);
+
+      anchors_x.emplace_back(next_anchor[0]);
+      anchors_y.emplace_back(next_anchor[1]);
     }
   }
 
+  void anchors_recenter() {
+    for (int i = 0; i < anchors_x.size(); ++i) {
+      // shift car reference angle to 0 degrees
+      double shift_x = anchors_x[i] - ref_x;
+      double shift_y = anchors_y[i] - ref_y;
+
+      anchors_x[i] = (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
+      anchors_y[i] = (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
+    }
+  }
+
+  void anchors_trim() {
+    anchors_x.resize(2);
+    anchors_y.resize(2);
+  }
+
  public:
-  std::vector<double> start_anchor_x;
-  std::vector<double> start_anchor_y;
+  std::vector<double> anchors_x;
+  std::vector<double> anchors_y;
   double ref_yaw;
-  Path generated_path{"generated"};
+  double ref_x;
+  double ref_y;
+  Path generated_path{"generated"};  // TODO Consider removing this
   const Path& previous_path_;
   const VehicleState& ego_state_;
   MapWaypoints map;
