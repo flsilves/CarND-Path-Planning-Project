@@ -54,12 +54,9 @@ class VehicleState {
 
  public:
   int id{-1};
-  double x{0.0};
-  double y{0.0};
-  double vx{0.0};
-  double vy{0.0};
-  double d{0.0};
-  double s{0.0};
+  double x{0.0}, y{0.0};
+  double vx{0.0}, vy{0.0};
+  double d{0.0}, s{0.0};
   double yaw{0.0};
   double speed{0.0};
 };
@@ -149,8 +146,8 @@ class SensorData {
     }
   }
 
-  bool vehicle_close_ahead(int steps_into_future, double ego_future_s,
-                           int ego_lane) {
+  double vehicle_close_ahead(int steps_into_future, double ego_future_s,
+                             int ego_lane) {
     for (auto& vehicle : surrounding_vehicles) {
       // std::cout << "v_lane[" << vehicle.get_lane() << "] ego_lane[" <<
       // ego_lane
@@ -161,15 +158,15 @@ class SensorData {
                             0.02;  // TODO use parameter <time per point>
 
         if (check_car_s > ego_future_s) {  // TODO: use parameter gap
-          // std::cout << "Vehicle in front at:" << (check_car_s - ego_future_s)
-          //          << std::endl;
-          if (check_car_s - ego_future_s < 30) {
-            return true;
+          std::cout << "Vehicle in front at:" << (check_car_s - ego_future_s)
+                    << "v:" << vehicle.speed << std::endl;
+          if (check_car_s - ego_future_s < 60) {
+            return vehicle.speed + 12.5;
           }
         }
       }
     }
-    return false;
+    return 0.0;
   }
 
  public:
@@ -182,9 +179,11 @@ class TrajectoryGenerator {
                       const MapWaypoints& map)
       : previous_path_(previous_path), ego_state_(ego_state), map(map) {}
 
-  Path generate_trajectory(double target_velocity, int target_lane) {
-    const double anchor_spacement = 30.0;
-    const unsigned extra_anchors = 3;
+  Path generate_trajectory(double target_velocity, int target_lane,
+                           bool retrigger) {
+    const double anchor_spacement = 50.0;
+    const unsigned extra_anchors = 2;
+    const unsigned path_length = 50;
 
     anchors_init();
     anchors_trim();
@@ -193,54 +192,41 @@ class TrajectoryGenerator {
 
     spline.set_points(anchors_x, anchors_y);
 
-    generated_path = previous_path_;
-    // generated_path.trim(20);
+    auto generated_path = previous_path_;
 
-    // generated_path.extend()
-    // Calculate how to break up spline points so that we travel at our
-    // desired reference velocity
-    double target_x = 30.0;
-    double target_y = spline(target_x);
-    double target_dist =
-        sqrt((target_x) * (target_x) + (target_y) * (target_y));
+    if (retrigger) {
+      generated_path.trim(10);
+    }
 
-    double x_add_on = 0;
-    double N = target_dist / (.02 * target_velocity / 2.2369);
+    auto missing_points = path_length - generated_path.size();
 
-    auto prev_size = previous_path_.size();
-    // std::cout << "N:" << N << std::endl;
+    auto x_increment = get_x_increment(target_velocity);
 
-    // include acceleration for trajectory generation
-    for (int i = 1; i <= 50 - prev_size; ++i) {
-      // distance =  N (point) * 0.02
-      // (second/point) * v (miles/second)
-      double x_point = x_add_on + (target_x) / N;
+    double x{0}, y{0};
 
-      double y_point = spline(x_point);
+    for (int i = 1; i <= missing_points; ++i) {
+      x = x + x_increment;
+      y = spline(x);
 
-      // std::cout << "Points: x[" << x_point << "] y[" << y_point << "]
-      // "
-      //          << std::endl;
-
-      x_add_on = x_point;
-
-      double x_ref = x_point;
-      double y_ref = y_point;
-
-      x_point = x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw) + ref_x;
-      y_point = x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw) + ref_y;
-
-      // std::cout << "Appending: x[" << x_point << "] y[" << y_point <<
-      // "] "
-      //          << std::endl;
-
-      generated_path.x.push_back(x_point);
-      generated_path.y.push_back(y_point);
+      generated_path.x.push_back(x * cos(ref_yaw) - y * sin(ref_yaw) + ref_x);
+      generated_path.y.push_back(x * sin(ref_yaw) + y * cos(ref_yaw) + ref_y);
     }
     return generated_path;
   }
 
  private:
+  double get_x_increment(double target_velocity) {
+    constexpr double time_per_point = .02;
+    constexpr double MPH_2_MPS = 0.44704;
+
+    double horizon_x = 30.0;
+    double horizon_y = spline(horizon_x);
+    double target_dist =
+        sqrt((horizon_x) * (horizon_x) + (horizon_y) * (horizon_y));
+    double N = target_dist / (time_per_point * target_velocity * MPH_2_MPS);
+    return horizon_x / N;
+  }
+
   void anchors_init() {
     anchors_x.clear();
     anchors_y.clear();
@@ -248,7 +234,6 @@ class TrajectoryGenerator {
 
     size_t prev_size = previous_path_.size();
 
-    // Initialization when there's no previous points
     if (prev_size < 2) {
       anchors_x.push_back(ego_state_.x - cos(ref_yaw));
       anchors_x.push_back(ego_state_.x);
@@ -262,9 +247,7 @@ class TrajectoryGenerator {
       double ref_x_prev = previous_path_.x.end()[-2];
       double ref_y_prev = previous_path_.y.end()[-2];
 
-      ref_yaw = atan2(ref_y - ref_y_prev,
-                      ref_x - ref_x_prev);  // where is this used?? Why do we
-                                            // need it? can't we use just yaw?
+      ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
 
       // std::cout << "ref_yaw:" << rad2deg(ref_yaw) << '\n';
 
@@ -311,7 +294,7 @@ class TrajectoryGenerator {
   double ref_yaw;
   double ref_x;
   double ref_y;
-  Path generated_path{"generated"};  // TODO Consider removing this
+  // Path generated_path{"generated"};  // TODO Consider removing this
   const Path& previous_path_;
   const VehicleState& ego_state_;
   MapWaypoints map;
@@ -335,11 +318,12 @@ int main() {
   VehicleState ego_state;
   Path previous_path("previous_path");
   TrajectoryGenerator trajectory_generator(previous_path, ego_state, map);
+  bool retrigger = false;
 
   h.onMessage([&map, &target_velocity, &lane, &previous_path, &ego_state,
-               &trajectory_generator](uWS::WebSocket<uWS::SERVER> ws,
-                                      char* data, size_t length,
-                                      uWS::OpCode opCode) {
+               &trajectory_generator,
+               &retrigger](uWS::WebSocket<uWS::SERVER> ws, char* data,
+                           size_t length, uWS::OpCode opCode) {
     if (valid_socket_message(length, data)) {
       auto s = hasData(data);
 
@@ -357,17 +341,22 @@ int main() {
 
           int prev_size = previous_path.size();
 
-          bool too_close = sensor_fusion.vehicle_close_ahead(
+          double front_speed = sensor_fusion.vehicle_close_ahead(
               previous_path.size(), previous_path.end_s, ego_state.get_lane());
 
           std::cout << sensor_fusion << '\n';
 
-          if (too_close && lane > 0) {
-            lane = 0;
-          }
+          if (front_speed > 1.0 && front_speed < target_velocity) {
+            if (front_speed < target_velocity) {
+              target_velocity -= .224 / 2;
+            } else {
+              target_velocity += .224 / 2;
+            }
 
-          if (target_velocity < 49.5) {
-            target_velocity += .224;
+            retrigger = false;
+          } else if (target_velocity < 49.5) {
+            target_velocity += .224 * 4;
+            retrigger = false;
           }
 
           std::cout << ego_state << '\n';
@@ -376,8 +365,8 @@ int main() {
             std::cout << previous_path << '\n';
           }
 
-          auto next_path =
-              trajectory_generator.generate_trajectory(target_velocity, lane);
+          auto next_path = trajectory_generator.generate_trajectory(
+              target_velocity, lane, retrigger);
           std::cout << next_path << '\n' << std::endl;
 
           json msgJson;
