@@ -167,53 +167,15 @@ class TrajectoryGenerator {
       : previous_path_(previous_path), ego_state_(ego_state), map(map) {}
 
   Path generate_trajectory(double target_velocity, int target_lane) {
-    vector<double> anchor_x;
-    vector<double> anchor_y;
-    int lane = 0;
-    double ref_x = ego_state_.x;
-    double ref_y = ego_state_.y;
-    double ref_yaw = deg2rad(ego_state_.yaw);
+    generate_start_anchors();
+    double ref_x = start_anchor_x.at(1);
+    double ref_y = start_anchor_y.at(1);
 
     size_t prev_size = previous_path_.size();
 
-    // Initialization when there's no previous points
-    if (prev_size < 2) {
-      // Extrapolate the previous position based on current yaw angle
-      double prev_car_x = ego_state_.x - cos(ref_yaw);
-      double prev_car_y = ego_state_.y - sin(ref_yaw);
+    std::vector<double> anchor_x{start_anchor_x};
+    std::vector<double> anchor_y{start_anchor_y};
 
-      // std::cout << "Ego.x:" << prev_car_x << " -> " << ego_state_.x
-      //          << std::endl;
-      // std::cout << "Ego.y:" << prev_car_y << " -> " << ego_state_.y
-      //          << std::endl;
-
-      anchor_x.push_back(prev_car_x);
-      anchor_x.push_back(ego_state_.x);
-
-      anchor_y.push_back(prev_car_y);
-      anchor_y.push_back(ego_state_.y);
-    } else {
-      ref_x = previous_path_.x.end()[-1];
-      ref_y = previous_path_.y.end()[-1];
-
-      double ref_x_prev = previous_path_.x.end()[-2];
-      double ref_y_prev = previous_path_.y.end()[-2];
-
-      ref_yaw = atan2(ref_y - ref_y_prev,
-                      ref_x - ref_x_prev);  // where is this used?? Why do we
-                                            // need it? can't we use just yaw?
-
-      // std::cout << "ref_yaw:" << rad2deg(ref_yaw) << '\n';
-
-      anchor_x.push_back(ref_x_prev);
-      anchor_x.push_back(ref_x);
-
-      anchor_y.push_back(ref_y_prev);
-      anchor_y.push_back(ref_y);
-    }
-
-    // In Freenet add evenly 30 spaced points ahead of the starting
-    // reference
     vector<double> next_wp0 =
         getXY(ego_state_.s + 50, (2 + 4 * target_lane), map.s, map.x, map.y);
 
@@ -288,9 +250,46 @@ class TrajectoryGenerator {
     return generated_path;
   }
 
-  Path get_path() { return generated_path; }
+ private:
+  void generate_start_anchors() {
+    start_anchor_x.clear();
+    start_anchor_y.clear();
+    ref_yaw = deg2rad(ego_state_.yaw);
+
+    size_t prev_size = previous_path_.size();
+
+    // Initialization when there's no previous points
+    if (prev_size < 2) {
+      start_anchor_x.push_back(ego_state_.x - cos(ref_yaw));
+      start_anchor_x.push_back(ego_state_.x);
+
+      start_anchor_y.push_back(ego_state_.y - sin(ref_yaw));
+      start_anchor_y.push_back(ego_state_.y);
+    } else {
+      double ref_x = previous_path_.x.end()[-1];
+      double ref_y = previous_path_.y.end()[-1];
+
+      double ref_x_prev = previous_path_.x.end()[-2];
+      double ref_y_prev = previous_path_.y.end()[-2];
+
+      ref_yaw = atan2(ref_y - ref_y_prev,
+                      ref_x - ref_x_prev);  // where is this used?? Why do we
+                                            // need it? can't we use just yaw?
+
+      // std::cout << "ref_yaw:" << rad2deg(ref_yaw) << '\n';
+
+      start_anchor_x.push_back(ref_x_prev);
+      start_anchor_x.push_back(ref_x);
+
+      start_anchor_y.push_back(ref_y_prev);
+      start_anchor_y.push_back(ref_y);
+    }
+  }
 
  public:
+  std::vector<double> start_anchor_x;
+  std::vector<double> start_anchor_y;
+  double ref_yaw;
   Path generated_path{"generated"};
   const Path& previous_path_;
   const VehicleState& ego_state_;
