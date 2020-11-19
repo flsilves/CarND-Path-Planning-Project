@@ -90,12 +90,6 @@ class Path {
     }
   }
 
-  void extend(const std::vector<double> x_extra,
-              const std::vector<double> y_extra) {
-    x.insert(x.end(), x_extra.begin(), x_extra.end());
-    y.insert(y.end(), y_extra.begin(), y_extra.end());
-  }
-
   void trim(std::size_t new_size) {
     if (new_size > x.size()) {
       x.resize(new_size);
