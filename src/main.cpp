@@ -247,6 +247,8 @@ class Prediction {
     reset_gaps();
     reset_lane_speeds();
 
+    constexpr auto TRAFFIC_SPEED_HORIZON_DISTANCE{100.0};
+
     for (auto& vehicle_history : history) {
       if (vehicle_history.empty()) {
         continue;
@@ -256,8 +258,9 @@ class Prediction {
       auto future_traffic_vehicle =
           traffic_vehicle.get_prediction(future_time, map.x, map.y);
 
-      std::cout << "traffic_vehicle:" << traffic_vehicle << '\n';
-      std::cout << "future_traffic_vehicle:" << future_traffic_vehicle << '\n';
+      // std::cout << "traffic_vehicle:" << traffic_vehicle << '\n';
+      // std::cout << "future_traffic_vehicle:" << future_traffic_vehicle <<
+      // '\n';
 
       auto vehicle_lane = traffic_vehicle.get_lane();
 
@@ -281,6 +284,13 @@ class Prediction {
         if (delta_s < lane_gap.distance_behind) {
           lane_gap.distance_behind = delta_s;
         }
+      }
+
+      std::cout << "vehicle.s[" << traffic_vehicle.s << "] ego.s[" << ego.s
+                << "]";
+      if ((traffic_vehicle.s > ego.s) &&
+          (traffic_vehicle.s < (ego.s + TRAFFIC_SPEED_HORIZON_DISTANCE))) {
+        lane_speed = fmin(lane_speed, traffic_vehicle.speed);
       }
     }
   }
