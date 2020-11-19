@@ -72,9 +72,12 @@ class VehicleState {
     prediction.x = x + speed * MPH_2_MPS * future_time * cos(rad_yaw);
     prediction.y = y + speed * MPH_2_MPS * future_time * sin(rad_yaw);
 
-    auto v = getFrenet(x, y, rad_yaw, map_x, map_y);
+    auto v = getFrenet(prediction.x, prediction.y, rad_yaw, map_x, map_y);
     prediction.s = v[0];
     prediction.d = v[1];
+
+    // std::cout << "ref" << *this << std::endl;
+    // std::cout << "prediction:" << prediction << std::endl;
     return prediction;
   }
 
@@ -253,6 +256,9 @@ class Prediction {
       auto future_traffic_vehicle =
           traffic_vehicle.get_prediction(future_time, map.x, map.y);
 
+      std::cout << "traffic_vehicle:" << traffic_vehicle << '\n';
+      std::cout << "future_traffic_vehicle:" << future_traffic_vehicle << '\n';
+
       auto vehicle_lane = traffic_vehicle.get_lane();
 
       // Irrelevant to predict state of the cars that are behind in the same
@@ -269,7 +275,7 @@ class Prediction {
       if (future_traffic_vehicle.s > future_ego_s) {
         if (delta_s < lane_gap.distance_ahead) {
           lane_gap.distance_ahead = delta_s;
-          lane_speed = traffic_vehicle.speed;
+          // lane_speed = traffic_vehicle.speed;
         }
       } else {
         if (delta_s < lane_gap.distance_behind) {
@@ -408,6 +414,7 @@ class TrajectoryGenerator {
 
 std::ostream& operator<<(std::ostream& os, const Prediction& rhs) {
   os << std::fixed << std::setprecision(2);
+  // clang-format off
   for (auto& vehicle_history : rhs.history) {
     if (not vehicle_history.empty()) {
       os << vehicle_history.back() << '\n';
@@ -416,9 +423,18 @@ std::ostream& operator<<(std::ostream& os, const Prediction& rhs) {
     }
   }
   os << '\n';
-  os << "|LANE_SPEEDS|" << '\n';
-  os << "Left[" << rhs.lane_speeds[0] << "] Center[" << rhs.lane_speeds[1]
-     << "] Right[" << rhs.lane_speeds[2] << ']';
+  os << "|LANE_SPEEDS|\n";
+  os << "Left[" << rhs.lane_speeds[0] << "] ";
+  os << "Center[" << rhs.lane_speeds[1]  << "] ";
+  os << "Right[" << rhs.lane_speeds[2] << "]\n\n";
+
+
+  os << "|GAPS|\n";
+  os << "Left[" << rhs.predicted_gaps[0].distance_behind << " <-> " << rhs.predicted_gaps[0].distance_ahead << "] ";
+  os << "Center[" << rhs.predicted_gaps[1].distance_behind << " <-> " << rhs.predicted_gaps[1].distance_ahead << "] ";
+  os << "Right[" << rhs.predicted_gaps[2].distance_behind << " <-> " << rhs.predicted_gaps[2].distance_ahead << "] ";
+
+  // clang-format on
 
   return os;
 }

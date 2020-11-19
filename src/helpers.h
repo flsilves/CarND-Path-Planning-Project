@@ -65,7 +65,7 @@ int NextWaypoint(double x, double y, double theta, const vector<double> &maps_x,
                  const vector<double> &maps_y) {
   int closestWaypoint = ClosestWaypoint(x,y,maps_x,maps_y);
 
-  std::cout << "Closest Waypoint" << closestWaypoint << std::endl;
+  //std::cout << "Closest Waypoint" << closestWaypoint << std::endl;
 
   double map_x = maps_x[closestWaypoint];
   double map_y = maps_y[closestWaypoint];
