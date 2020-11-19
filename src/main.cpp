@@ -22,6 +22,9 @@
 using nlohmann::json;
 using std::string;
 using std::vector;
+constexpr double MPH_2_MPS = 0.44704;
+constexpr auto DETECTED_VEHICLES{12u};
+constexpr auto OBJECT_HISTORY_SIZE{10u};
 
 static std::ofstream telemetry_log("./telemetry.log", std::ios::app);
 
@@ -38,8 +41,8 @@ class VehicleState {
     speed = telemetry_data["speed"];  // units ??
   }
 
-  VehicleState(int id, double x, double y, double vx, double vy, double s,
-               double d)
+  VehicleState(std::size_t id, double x, double y, double vx, double vy,
+               double s, double d)
       : id(id), x(x), y(y), vx(vx), vy(vy), s(s), d(d) {
     speed = sqrt(vx * vx + vy * vy);
     yaw = rad2deg(atan2(vy, vx));
@@ -52,8 +55,10 @@ class VehicleState {
     return fmax(fmin(2, floor(d / lane_width)), 0);
   }
 
+  bool evaluate_continuity(VehicleState other) { return true; }
+
  public:
-  int id{-1};
+  std::size_t id{1000};
   double x{0.0}, y{0.0};
   double vx{0.0}, vy{0.0};
   double d{0.0}, s{0.0};
@@ -131,28 +136,46 @@ std::ostream& operator<<(std::ostream& os, const VehicleState& vehicle) {
   return os;
 }
 
-class SensorData {
+class ObjectHistory {
  public:
-  SensorData(json sensor_fusion) {
+  ObjectHistory() = default;
+
+  void update(json sensor_fusion) {
     for (auto& sensor_data : sensor_fusion) {
-      double id = sensor_data[0];
+      std::size_t id = sensor_data[0];
       double x = sensor_data[1];
       double y = sensor_data[2];
       double vx = sensor_data[3];
       double vy = sensor_data[4];
       double s = sensor_data[5];
       double d = sensor_data[6];
-      surrounding_vehicles.emplace_back(id, x, y, vx / 0.44704, vy / 0.44704, s,
-                                        d);
+
+      VehicleState detected_state{id, x, y, vx / 0.44704, vy / 0.44704, s, d};
+
+      auto& vehicle_history = history[id];
+
+      if (not vehicle_history.empty()) {
+        auto& previous_state = vehicle_history.back();
+
+        bool continuous = previous_state.evaluate_continuity(detected_state);
+
+        if (not continuous) {
+          vehicle_history.clear();
+        }
+      }
+
+      vehicle_history.push_back(detected_state);
+
+      if (vehicle_history.size() > OBJECT_HISTORY_SIZE) {
+        vehicle_history.pop_front();
+      }
     }
   }
 
   double vehicle_close_ahead(int steps_into_future, double ego_future_s,
                              int ego_lane) {
-    for (auto& vehicle : surrounding_vehicles) {
-      // std::cout << "v_lane[" << vehicle.get_lane() << "] ego_lane[" <<
-      // ego_lane
-      //          << "]" << std::endl;
+    for (auto& vehicle_history : history) {
+      auto vehicle = vehicle_history.back();
       if (vehicle.get_lane() == ego_lane) {
         double check_car_s =
             vehicle.s + vehicle.speed * steps_into_future *
@@ -171,14 +194,14 @@ class SensorData {
   }
 
  public:
-  std::vector<VehicleState> surrounding_vehicles;
+  std::array<std::deque<VehicleState>, DETECTED_VEHICLES> history;
 };
 
 class TrajectoryGenerator {
  public:
-  TrajectoryGenerator(const Path& previous_path, const VehicleState& ego_state,
+  TrajectoryGenerator(const Path& previous_path, const VehicleState& ego,
                       const MapWaypoints& map)
-      : previous_path_(previous_path), ego_state_(ego_state), map(map) {}
+      : previous_path_(previous_path), ego_(ego), map(map) {}
 
   Path generate_trajectory(double target_velocity, int target_lane,
                            bool retrigger) {
@@ -218,7 +241,6 @@ class TrajectoryGenerator {
  private:
   double get_x_increment(double target_velocity) {
     constexpr double time_per_point = .02;
-    constexpr double MPH_2_MPS = 0.44704;
 
     double horizon_x = 30.0;
     double horizon_y = spline(horizon_x);
@@ -231,16 +253,16 @@ class TrajectoryGenerator {
   void anchors_init() {
     anchors_x.clear();
     anchors_y.clear();
-    ref_yaw = deg2rad(ego_state_.yaw);
+    ref_yaw = deg2rad(ego_.yaw);
 
     std::size_t prev_size = previous_path_.size();
 
     if (prev_size < 2) {
-      anchors_x.push_back(ego_state_.x - cos(ref_yaw));
-      anchors_x.push_back(ego_state_.x);
+      anchors_x.push_back(ego_.x - cos(ref_yaw));
+      anchors_x.push_back(ego_.x);
 
-      anchors_y.push_back(ego_state_.y - sin(ref_yaw));
-      anchors_y.push_back(ego_state_.y);
+      anchors_y.push_back(ego_.y - sin(ref_yaw));
+      anchors_y.push_back(ego_.y);
     } else {
       ref_x = previous_path_.x.end()[-1];
       ref_y = previous_path_.y.end()[-1];
@@ -265,7 +287,7 @@ class TrajectoryGenerator {
   void anchors_add(double anchor_spacement, unsigned extra_anchors,
                    int target_lane) {
     for (auto i = 1u; i <= extra_anchors; ++i) {
-      auto next_anchor = getXY(ego_state_.s + (i) * (anchor_spacement),
+      auto next_anchor = getXY(ego_.s + (i) * (anchor_spacement),
                                (2 + 4 * target_lane), map.s, map.x, map.y);
 
       anchors_x.emplace_back(next_anchor[0]);
@@ -290,21 +312,17 @@ class TrajectoryGenerator {
   }
 
  public:
-  std::vector<double> anchors_x;
-  std::vector<double> anchors_y;
-  double ref_yaw;
-  double ref_x;
-  double ref_y;
-  // Path generated_path{"generated"};  // TODO Consider removing this
-  const Path& previous_path_;
-  const VehicleState& ego_state_;
-  MapWaypoints map;
   tk::spline spline;
+  std::vector<double> anchors_x, anchors_y;
+  double ref_yaw, ref_x, ref_y;
+  const Path& previous_path_;
+  const VehicleState& ego_;
+  const MapWaypoints map;
 };
 
-std::ostream& operator<<(std::ostream& os, const SensorData& data) {
-  for (auto& vehicle : data.surrounding_vehicles) {
-    os << vehicle << '\n';
+std::ostream& operator<<(std::ostream& os, const ObjectHistory& rhs) {
+  for (auto& vehicle : rhs.history) {
+    os << vehicle.back() << '\n';
   }
   return os;
 }
@@ -316,15 +334,16 @@ int main() {
   double target_velocity = 0;  // mph
   int lane = 1;
 
-  VehicleState ego_state;
+  VehicleState ego;
+  ObjectHistory object_history;
   Path previous_path("previous_path");
-  TrajectoryGenerator trajectory_generator(previous_path, ego_state, map);
+  TrajectoryGenerator trajectory_generator(previous_path, ego, map);
   bool retrigger = false;
 
-  h.onMessage([&map, &target_velocity, &lane, &previous_path, &ego_state,
-               &trajectory_generator,
-               &retrigger](uWS::WebSocket<uWS::SERVER> ws, char* data,
-                           std::size_t length, uWS::OpCode opCode) {
+  h.onMessage([&map, &target_velocity, &lane, &previous_path, &ego,
+               &trajectory_generator, &retrigger,
+               &object_history](uWS::WebSocket<uWS::SERVER> ws, char* data,
+                                std::size_t length, uWS::OpCode opCode) {
     if (valid_socket_message(length, data)) {
       auto s = hasData(data);
 
@@ -335,33 +354,30 @@ int main() {
         if (event == "telemetry") {
           auto telemetry_data = j[1];
 
-          VehicleState prev_ego{ego_state};
+          VehicleState prev_ego{ego};
 
-          ego_state.update(telemetry_data);
+          ego.update(telemetry_data);
           previous_path.update(telemetry_data);
 
-          double delta_x = fabs(ego_state.x - prev_ego.x);
-          double delta_y = fabs(ego_state.y - prev_ego.y);
+          double delta_x = fabs(ego.x - prev_ego.x);
+          double delta_y = fabs(ego.y - prev_ego.y);
 
           double distance_traveled =
               sqrt(delta_x * delta_x + delta_y * delta_y);
 
-          double average_speed =
-              (ego_state.speed / 2 + prev_ego.speed / 2) * 0.44704;
+          double average_speed = (ego.speed / 2 + prev_ego.speed / 2) * 0.44704;
 
           double time = distance_traveled / average_speed;
 
           std::cout << "time[" << time << "] average_speed[" << average_speed
                     << "] d[" << distance_traveled << "]" << std::endl;
 
-          SensorData sensor_fusion{telemetry_data["sensor_fusion"]};
+          object_history.update(telemetry_data["sensor_fusion"]);
 
-          int prev_size = previous_path.size();
+          double front_speed = object_history.vehicle_close_ahead(
+              previous_path.size(), previous_path.end_s, ego.get_lane());
 
-          double front_speed = sensor_fusion.vehicle_close_ahead(
-              previous_path.size(), previous_path.end_s, ego_state.get_lane());
-
-          // std::cout << sensor_fusion << '\n';
+          std::cout << object_history << '\n';
 
           if (front_speed > 1.0 && front_speed < target_velocity) {
             if (front_speed < target_velocity) {
@@ -374,7 +390,7 @@ int main() {
             target_velocity += .224 * 2;
           }
 
-          std::cout << ego_state << '\n';
+          std::cout << ego << '\n';
 
           if (not previous_path.empty()) {
             std::cout << previous_path << '\n';
