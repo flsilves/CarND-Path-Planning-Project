@@ -58,9 +58,9 @@ class VehicleState {
   bool evaluate_continuity(VehicleState next) {
     if (abs(next.speed - speed) > 3.0 || abs(next.x - x) > 5.0 ||
         abs(next.y - y) > 5.0) {
-      std::cout << "next.speed[" << next.speed << "] speed[" << speed << ']';
-      std::cout << "next.x[" << next.x << "] x[" << x << ']';
-      std::cout << "next.y[" << next.y << "] y[" << y << ']';
+      // std::cout << "next.speed[" << next.speed << "] speed[" << speed << ']';
+      // std::cout << "next.x[" << next.x << "] x[" << x << ']';
+      // std::cout << "next.y[" << next.y << "] y[" << y << ']';
 
       return false;
     }
@@ -71,7 +71,7 @@ class VehicleState {
   bool in_right_side_of_road() { return (d <= 12.0) && (d >= 0.0); }
 
  public:
-  std::size_t id{1000};
+  std::size_t id{42};
   double x{0.0}, y{0.0};
   double vx{0.0}, vy{0.0};
   double d{0.0}, s{0.0};
@@ -121,7 +121,7 @@ class Path {
 
 std::ostream& operator<<(std::ostream& os, const Path& path) {
   os << std::fixed << std::setprecision(2);
-  os << "[" << path.name << "] ";
+  // os << "[" << path.name << "] ";
   os << "x[" << path.x.front() << " -> " << path.x.back() << "] ";
   os << "y[" << path.y.front() << " -> " << path.y.back() << "] ";
   os << "end_s[" << path.end_s << "] ";
@@ -131,8 +131,8 @@ std::ostream& operator<<(std::ostream& os, const Path& path) {
 }
 
 std::ostream& operator<<(std::ostream& os, const VehicleState& vehicle) {
-  os << std::fixed << std::setprecision(2);
-  os << "id[" << vehicle.id << "] ";
+  os << std::fixed << std::setw(2) << std::setprecision(2);
+  os << "id[" << vehicle.id << "]\t";
   os << "x[" << vehicle.x << "] ";
   os << "y[" << vehicle.y << "] ";
   os << "s[" << vehicle.s << "] ";
@@ -168,7 +168,7 @@ class ObjectHistory {
           bool continuous = previous_state.evaluate_continuity(detected_car);
 
           if (not continuous) {
-            std::cout << "ID[" << id << "] not continous!" << '\n';
+            // std::cout << "ID[" << id << "] not continous!" << '\n';
             vehicle_history.clear();
           }
         }
@@ -199,10 +199,10 @@ class ObjectHistory {
                             0.02;  // TODO use parameter <time per point>
 
         if (check_car_s > ego_future_s) {  // TODO: use parameter gap
-          std::cout << "Vehicle in front s[" << vehicle.s << "] v["
-                    << vehicle.speed << "] s_gap[" << check_car_s << " - "
-                    << ego_future_s << " = " << (check_car_s - ego_future_s)
-                    << "] v[" << vehicle.speed << ']' << std::endl;
+          // std::cout << "Vehicle in front s[" << vehicle.s << "] v["
+          //          << vehicle.speed << "] s_gap[" << check_car_s << " - "
+          //          << ego_future_s << " = " << (check_car_s - ego_future_s)
+          //          << "] v[" << vehicle.speed << ']' << std::endl;
           if (check_car_s - ego_future_s < 60) {
             return vehicle.speed;
           }
@@ -337,9 +337,12 @@ class TrajectoryGenerator {
 };
 
 std::ostream& operator<<(std::ostream& os, const ObjectHistory& rhs) {
+  os << std::fixed << std::setprecision(2);
   for (auto& vehicle_history : rhs.history) {
     if (not vehicle_history.empty()) {
       os << vehicle_history.back() << '\n';
+    } else {
+      os << "EMPTY" << '\n';
     }
   }
   return os;
@@ -386,16 +389,10 @@ int main() {
 
           double time = distance_traveled / average_speed;
 
-          std::cout << "time_step[" << time << "] average_speed["
-                    << average_speed << "] dist_step[" << distance_traveled
-                    << "]" << std::endl;
-
           object_history.update(telemetry_data["sensor_fusion"]);
 
           double front_speed = object_history.vehicle_close_ahead(
               previous_path.size(), previous_path.end_s, ego.get_lane(), ego.s);
-
-          std::cout << object_history << '\n';
 
           if (front_speed > 1.0 && front_speed < target_velocity) {
             if (front_speed < target_velocity) {
@@ -408,15 +405,26 @@ int main() {
             target_velocity += .224 * 2;
           }
 
-          std::cout << ego << '\n';
-
-          if (not previous_path.empty()) {
-            std::cout << previous_path << '\n';
-          }
-
           auto next_path =
               trajectory_generator.generate_trajectory(target_velocity, lane);
-          std::cout << next_path << '\n' << std::endl;
+
+          // LOGGING ------------------------
+          std::cout << "|EGO|\n" << ego << "\n\n";
+
+          std::cout << "|STEP|\n"
+                    << "t_delta[" << time << "] dist_delta["
+                    << distance_traveled << "] v_avg[" << average_speed << ']'
+                    << "\n\n";
+
+          if (not previous_path.empty()) {
+            std::cout << "|PREV_PATH|\n" << previous_path << "\n\n";
+          }
+
+          std::cout << "|NEXT_PATH|\n" << next_path << "\n\n";
+
+          std::cout << "|OBJECT_HISTORY|\n" << object_history << "\n";
+          std::cout << "--------------------------------" << std::endl;
+          // ---------------------------------
 
           json msgJson;
           msgJson["next_x"] = next_path.x;
