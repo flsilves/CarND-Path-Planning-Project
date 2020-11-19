@@ -56,16 +56,8 @@ class VehicleState {
   }
 
   bool evaluate_continuity(VehicleState next) {
-    if (abs(next.speed - speed) > 3.0 || abs(next.x - x) > 5.0 ||
-        abs(next.y - y) > 5.0) {
-      // std::cout << "next.speed[" << next.speed << "] speed[" << speed << ']';
-      // std::cout << "next.x[" << next.x << "] x[" << x << ']';
-      // std::cout << "next.y[" << next.y << "] y[" << y << ']';
-
-      return false;
-    }
-
-    return true;
+    return (abs(next.speed - speed) < 3.0) && (abs(next.x - x) < 5.0) &&
+           (abs(next.y - y) < 5.0);
   }
 
   bool in_right_side_of_road() { return (d <= 12.0) && (d >= 0.0); }
@@ -99,7 +91,8 @@ class Path {
     end_d = telemetry_data["end_path_d"];
 
     if (x.size() != y.size()) {
-      throw std::runtime_error("<Path::ctor>: x and y have different lengths");
+      throw std::runtime_error(
+          "Path::update(): x and y have different lengths");
     }
   }
 
@@ -140,7 +133,6 @@ std::ostream& operator<<(std::ostream& os, const VehicleState& vehicle) {
   os << "d[" << std::setw(5) << vehicle.d << "] ";
   os << "speed[" << std::setw(5) << vehicle.speed << "] ";
   os << "yaw[" << std::setw(6) << vehicle.yaw << ']';
-
   return os;
 }
 
@@ -149,24 +141,25 @@ class ObjectHistory {
   ObjectHistory() = default;
 
   void update(json sensor_fusion) {
-    for (auto& sensor_data : sensor_fusion) {
-      std::size_t id = sensor_data[0];
-      double x = sensor_data[1];
-      double y = sensor_data[2];
-      double vx = sensor_data[3];
-      double vy = sensor_data[4];
-      double s = sensor_data[5];
-      double d = sensor_data[6];
+    for (auto& object_entry : sensor_fusion) {
+      std::size_t id = object_entry[0];
+      double x = object_entry[1];
+      double y = object_entry[2];
+      double vx = object_entry[3];
+      double vy = object_entry[4];
+      double s = object_entry[5];
+      double d = object_entry[6];
 
-      VehicleState detected_car{id, x, y, vx / 0.44704, vy / 0.44704, s, d};
+      VehicleState vehicle_detected{id, x, y, vx / 0.44704, vy / 0.44704, s, d};
 
       auto& vehicle_history = history[id];
 
-      if (detected_car.in_right_side_of_road()) {
+      if (vehicle_detected.in_right_side_of_road()) {
         if (not vehicle_history.empty()) {
           auto& previous_state = vehicle_history.back();
 
-          bool continuous = previous_state.evaluate_continuity(detected_car);
+          bool continuous =
+              previous_state.evaluate_continuity(vehicle_detected);
 
           if (not continuous) {
             // std::cout << "ID[" << id << "] not continous!" << '\n';
@@ -174,7 +167,7 @@ class ObjectHistory {
           }
         }
 
-        vehicle_history.push_back(detected_car);
+        vehicle_history.push_back(vehicle_detected);
 
       } else {
         vehicle_history.clear();
