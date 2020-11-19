@@ -55,7 +55,20 @@ class VehicleState {
     return fmax(fmin(2, floor(d / lane_width)), 0);
   }
 
-  bool evaluate_continuity(VehicleState other) { return true; }
+  bool evaluate_continuity(VehicleState next) {
+    if (abs(next.speed - speed) > 3.0 || (next.x - x) < 0.0 ||
+        abs(next.y - y) > 3.0) {
+      std::cout << "next.speed[" << next.speed << "] speed[" << speed << ']';
+      std::cout << "next.x[" << next.x << "] x[" << x << ']';
+      std::cout << "next.y[" << next.y << "] y[" << y << ']';
+
+      return false;
+    }
+
+    return true;
+  }
+
+  bool in_right_side_of_road() { return (d <= 12.0) && (d >= 0.0); }
 
  public:
   std::size_t id{1000};
@@ -144,21 +157,27 @@ class ObjectHistory {
       double s = sensor_data[5];
       double d = sensor_data[6];
 
-      VehicleState detected_state{id, x, y, vx / 0.44704, vy / 0.44704, s, d};
+      VehicleState detected_car{id, x, y, vx / 0.44704, vy / 0.44704, s, d};
 
       auto& vehicle_history = history[id];
 
-      if (not vehicle_history.empty()) {
-        auto& previous_state = vehicle_history.back();
+      if (detected_car.in_right_side_of_road()) {
+        if (not vehicle_history.empty()) {
+          auto& previous_state = vehicle_history.back();
 
-        bool continuous = previous_state.evaluate_continuity(detected_state);
+          bool continuous = previous_state.evaluate_continuity(detected_car);
 
-        if (not continuous) {
-          vehicle_history.clear();
+          if (not continuous) {
+            std::cout << "ID[" << id << "] not continous!" << '\n';
+            vehicle_history.clear();
+          }
         }
-      }
 
-      vehicle_history.push_back(detected_state);
+        vehicle_history.push_back(detected_car);
+
+      } else {
+        vehicle_history.clear();
+      }
 
       if (vehicle_history.size() > OBJECT_HISTORY_SIZE) {
         vehicle_history.pop_front();
@@ -169,6 +188,10 @@ class ObjectHistory {
   double vehicle_close_ahead(int steps_into_future, double ego_future_s,
                              int ego_lane) {
     for (auto& vehicle_history : history) {
+      if (vehicle_history.empty()) {
+        continue;
+      }
+
       auto vehicle = vehicle_history.back();
       if (vehicle.get_lane() == ego_lane) {
         double check_car_s =
@@ -312,8 +335,10 @@ class TrajectoryGenerator {
 };
 
 std::ostream& operator<<(std::ostream& os, const ObjectHistory& rhs) {
-  for (auto& vehicle : rhs.history) {
-    os << vehicle.back() << '\n';
+  for (auto& vehicle_history : rhs.history) {
+    if (not vehicle_history.empty()) {
+      os << vehicle_history.back() << '\n';
+    }
   }
   return os;
 }
@@ -355,12 +380,13 @@ int main() {
           double distance_traveled =
               sqrt(delta_x * delta_x + delta_y * delta_y);
 
-          double average_speed = (ego.speed / 2 + prev_ego.speed / 2) * 0.44704;
+          double average_speed = (ego.speed / 2 + prev_ego.speed / 2);
 
           double time = distance_traveled / average_speed;
 
-          std::cout << "time[" << time << "] average_speed[" << average_speed
-                    << "] d[" << distance_traveled << "]" << std::endl;
+          std::cout << "time_step[" << time << "] average_speed["
+                    << average_speed << "] dist_step[" << distance_traveled
+                    << "]" << std::endl;
 
           object_history.update(telemetry_data["sensor_fusion"]);
 
