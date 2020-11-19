@@ -131,15 +131,16 @@ std::ostream& operator<<(std::ostream& os, const Path& path) {
 }
 
 std::ostream& operator<<(std::ostream& os, const VehicleState& vehicle) {
-  os << std::fixed << std::setw(2) << std::setprecision(2);
-  os << "id[" << vehicle.id << "]\t";
-  os << "x[" << vehicle.x << "] ";
-  os << "y[" << vehicle.y << "] ";
-  os << "s[" << vehicle.s << "] ";
-  os << "d[" << vehicle.d << "] ";
+  os << std::fixed << std::setprecision(2);
+  os << "id[" << std::setw(2) << vehicle.id << "] ";
   os << "lane[" << vehicle.get_lane() << "] ";
-  os << "yaw[" << vehicle.yaw << "] ";
-  os << "speed[" << vehicle.speed << ']';
+  os << "x[" << std::setw(7) << vehicle.x << "] ";
+  os << "y[" << std::setw(7) << vehicle.y << "] ";
+  os << "s[" << std::setw(7) << vehicle.s << "] ";
+  os << "d[" << std::setw(5) << vehicle.d << "] ";
+  os << "speed[" << std::setw(5) << vehicle.speed << "] ";
+  os << "yaw[" << std::setw(6) << vehicle.yaw << ']';
+
   return os;
 }
 
