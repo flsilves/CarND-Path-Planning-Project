@@ -197,8 +197,7 @@ class TrajectoryGenerator {
                       const MapWaypoints& map)
       : previous_path_(previous_path), ego_(ego), map(map) {}
 
-  Path generate_trajectory(double target_velocity, int target_lane,
-                           bool retrigger) {
+  Path generate_trajectory(double target_velocity, int target_lane) {
     const double anchor_spacement = 50.0;
     const unsigned extra_anchors = 2;
     const unsigned path_length = 50;
@@ -212,9 +211,7 @@ class TrajectoryGenerator {
 
     auto generated_path = previous_path_;
 
-    if (retrigger) {
-      generated_path.trim(10);
-    }
+    generated_path.trim(10);
 
     auto missing_points = path_length - generated_path.size();
 
@@ -332,10 +329,9 @@ int main() {
   ObjectHistory object_history;
   Path previous_path("previous_path");
   TrajectoryGenerator trajectory_generator(previous_path, ego, map);
-  bool retrigger = false;
 
   h.onMessage([&map, &target_velocity, &lane, &previous_path, &ego,
-               &trajectory_generator, &retrigger,
+               &trajectory_generator,
                &object_history](uWS::WebSocket<uWS::SERVER> ws, char* data,
                                 std::size_t length, uWS::OpCode opCode) {
     if (valid_socket_message(length, data)) {
@@ -390,8 +386,8 @@ int main() {
             std::cout << previous_path << '\n';
           }
 
-          auto next_path = trajectory_generator.generate_trajectory(
-              target_velocity, lane, retrigger);
+          auto next_path =
+              trajectory_generator.generate_trajectory(target_velocity, lane);
           std::cout << next_path << '\n' << std::endl;
 
           json msgJson;
