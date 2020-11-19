@@ -25,12 +25,17 @@ using std::vector;
 constexpr double MPH_2_MPS = 0.44704;
 constexpr auto DETECTED_VEHICLES{12u};
 constexpr auto OBJECT_HISTORY_SIZE{10u};
+constexpr auto NUMBER_OF_LANES{3u};
+constexpr auto MAX_LANE_SPEED{50.0};
+constexpr auto SENSOR_RANGE_METERS{200.0};
 
 static std::ofstream telemetry_log("./telemetry.log", std::ios::app);
 
 class VehicleState {
  public:
   VehicleState() = default;
+
+  VehicleState(const VehicleState& other) = default;
 
   void update(json telemetry_data) {
     x = telemetry_data["x"];
@@ -58,6 +63,19 @@ class VehicleState {
   bool evaluate_continuity(VehicleState next) {
     return (abs(next.speed - speed) < 3.0) && (abs(next.x - x) < 5.0) &&
            (abs(next.y - y) < 5.0);
+  }
+
+  VehicleState get_prediction(double future_time, const vector<double>& map_x,
+                              const vector<double>& map_y) {
+    VehicleState prediction{*this};
+    auto rad_yaw = deg2rad(yaw);
+    prediction.x = x + speed * MPH_2_MPS * future_time * cos(rad_yaw);
+    prediction.y = y + speed * MPH_2_MPS * future_time * sin(rad_yaw);
+
+    auto v = getFrenet(x, y, rad_yaw, map_x, map_y);
+    prediction.s = v[0];
+    prediction.d = v[1];
+    return prediction;
   }
 
   bool in_right_side_of_road() { return (d <= 12.0) && (d >= 0.0); }
@@ -136,11 +154,15 @@ std::ostream& operator<<(std::ostream& os, const VehicleState& vehicle) {
   return os;
 }
 
-class ObjectHistory {
+struct Gap {
+  double distance_behind;
+  double distance_ahead;
+};
+class Prediction {
  public:
-  ObjectHistory() = default;
+  Prediction(const MapWaypoints& map) : map(map){};
 
-  void update(json sensor_fusion) {
+  void update_object_history(json sensor_fusion) {
     for (auto& object_entry : sensor_fusion) {
       std::size_t id = object_entry[0];
       double x = object_entry[1];
@@ -206,8 +228,62 @@ class ObjectHistory {
     return 0.0;
   }
 
+  void reset_lane_speeds() {
+    for (auto& lane_speed : lane_speeds) {
+      lane_speed = MAX_LANE_SPEED;
+    }
+  }
+
+  void reset_gaps() {
+    for (auto& gap : predicted_gaps) {
+      gap = Gap{SENSOR_RANGE_METERS, SENSOR_RANGE_METERS};
+    }
+  }
+
+  void predict_gaps(VehicleState ego, double future_ego_s, double future_time) {
+    reset_gaps();
+    reset_lane_speeds();
+
+    for (auto& vehicle_history : history) {
+      if (vehicle_history.empty()) {
+        continue;
+      }
+
+      auto& traffic_vehicle = vehicle_history.back();
+      auto future_traffic_vehicle =
+          traffic_vehicle.get_prediction(future_time, map.x, map.y);
+
+      auto vehicle_lane = traffic_vehicle.get_lane();
+
+      // Irrelevant to predict state of the cars that are behind in the same
+      // lane
+      if (vehicle_lane == ego.get_lane() && ego.s > traffic_vehicle.s) {
+        continue;
+      }
+
+      auto delta_s = fabs(future_traffic_vehicle.s - future_ego_s);
+
+      auto& lane_gap = predicted_gaps[vehicle_lane];
+      auto& lane_speed = lane_speeds[vehicle_lane];
+
+      if (future_traffic_vehicle.s > future_ego_s) {
+        if (delta_s < lane_gap.distance_ahead) {
+          lane_gap.distance_ahead = delta_s;
+          lane_speed = traffic_vehicle.speed;
+        }
+      } else {
+        if (delta_s < lane_gap.distance_behind) {
+          lane_gap.distance_behind = delta_s;
+        }
+      }
+    }
+  }
+
  public:
   std::array<std::deque<VehicleState>, DETECTED_VEHICLES> history;
+  std::array<Gap, NUMBER_OF_LANES> predicted_gaps;
+  std::array<double, NUMBER_OF_LANES> lane_speeds;
+  const MapWaypoints map;
 };
 
 class TrajectoryGenerator {
@@ -330,7 +406,7 @@ class TrajectoryGenerator {
   const MapWaypoints map;
 };
 
-std::ostream& operator<<(std::ostream& os, const ObjectHistory& rhs) {
+std::ostream& operator<<(std::ostream& os, const Prediction& rhs) {
   os << std::fixed << std::setprecision(2);
   for (auto& vehicle_history : rhs.history) {
     if (not vehicle_history.empty()) {
@@ -339,6 +415,11 @@ std::ostream& operator<<(std::ostream& os, const ObjectHistory& rhs) {
       os << "EMPTY" << '\n';
     }
   }
+  os << '\n';
+  os << "|LANE_SPEEDS|" << '\n';
+  os << "Left[" << rhs.lane_speeds[0] << "] Center[" << rhs.lane_speeds[1]
+     << "] Right[" << rhs.lane_speeds[2] << ']';
+
   return os;
 }
 
@@ -350,14 +431,14 @@ int main() {
   int lane = 1;
 
   VehicleState ego;
-  ObjectHistory object_history;
+  Prediction prediction{map};
   Path previous_path("previous_path");
   TrajectoryGenerator trajectory_generator(previous_path, ego, map);
 
   h.onMessage([&map, &target_velocity, &lane, &previous_path, &ego,
                &trajectory_generator,
-               &object_history](uWS::WebSocket<uWS::SERVER> ws, char* data,
-                                std::size_t length, uWS::OpCode opCode) {
+               &prediction](uWS::WebSocket<uWS::SERVER> ws, char* data,
+                            std::size_t length, uWS::OpCode opCode) {
     if (valid_socket_message(length, data)) {
       auto s = hasData(data);
 
@@ -383,9 +464,11 @@ int main() {
 
           double time = distance_traveled / average_speed;
 
-          object_history.update(telemetry_data["sensor_fusion"]);
+          prediction.update_object_history(telemetry_data["sensor_fusion"]);
+          prediction.predict_gaps(ego, previous_path.end_s,
+                                  previous_path.size() * 0.02);
 
-          double front_speed = object_history.vehicle_close_ahead(
+          double front_speed = prediction.vehicle_close_ahead(
               previous_path.size(), previous_path.end_s, ego.get_lane(), ego.s);
 
           if (front_speed > 1.0 && front_speed < target_velocity) {
@@ -416,7 +499,7 @@ int main() {
 
           std::cout << "|NEXT_PATH|\n" << next_path << "\n\n";
 
-          std::cout << "|OBJECT_HISTORY|\n" << object_history << "\n";
+          std::cout << "|OBJECT_HISTORY|\n" << prediction << "\n";
           std::cout << "--------------------------------" << std::endl;
           // ---------------------------------
 
