@@ -228,7 +228,7 @@ class Prediction {
         }
       }
     }
-    return 0.0;
+    return 49.5;
   }
 
   void reset_lane_speeds() {
@@ -487,15 +487,15 @@ int main() {
           double front_speed = prediction.vehicle_close_ahead(
               previous_path.size(), previous_path.end_s, ego.get_lane(), ego.s);
 
-          if (front_speed > 1.0 && front_speed < target_velocity) {
-            if (front_speed < target_velocity) {
+          if (front_speed < target_velocity) {
+            if (fabs(front_speed - target_velocity) > 1.0) {
               target_velocity -= .224;
             } else {
-              target_velocity += .224;
+              target_velocity = front_speed;
             }
-
-          } else if (target_velocity < 49.5) {
-            target_velocity += .224 * 2;
+            //
+          } else {
+            target_velocity += .224;
           }
 
           auto next_path =
