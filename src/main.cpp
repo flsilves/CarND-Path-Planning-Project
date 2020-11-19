@@ -56,8 +56,8 @@ class VehicleState {
   }
 
   bool evaluate_continuity(VehicleState next) {
-    if (abs(next.speed - speed) > 3.0 || (next.x - x) < 0.0 ||
-        abs(next.y - y) > 3.0) {
+    if (abs(next.speed - speed) > 3.0 || abs(next.x - x) > 5.0 ||
+        abs(next.y - y) > 5.0) {
       std::cout << "next.speed[" << next.speed << "] speed[" << speed << ']';
       std::cout << "next.x[" << next.x << "] x[" << x << ']';
       std::cout << "next.y[" << next.y << "] y[" << y << ']';
@@ -186,21 +186,23 @@ class ObjectHistory {
   }
 
   double vehicle_close_ahead(int steps_into_future, double ego_future_s,
-                             int ego_lane) {
+                             int ego_lane, double ego_s) {
     for (auto& vehicle_history : history) {
       if (vehicle_history.empty()) {
         continue;
       }
 
       auto vehicle = vehicle_history.back();
-      if (vehicle.get_lane() == ego_lane) {
+      if (vehicle.get_lane() == ego_lane && vehicle.s > ego_s) {
         double check_car_s =
             vehicle.s + vehicle.speed * steps_into_future *
                             0.02;  // TODO use parameter <time per point>
 
         if (check_car_s > ego_future_s) {  // TODO: use parameter gap
-          std::cout << "Vehicle in front at:" << (check_car_s - ego_future_s)
-                    << "v:" << vehicle.speed << std::endl;
+          std::cout << "Vehicle in front s[" << vehicle.s << "] v["
+                    << vehicle.speed << "] s_gap[" << check_car_s << " - "
+                    << ego_future_s << " = " << (check_car_s - ego_future_s)
+                    << "] v[" << vehicle.speed << ']' << std::endl;
           if (check_car_s - ego_future_s < 60) {
             return vehicle.speed;
           }
@@ -391,7 +393,7 @@ int main() {
           object_history.update(telemetry_data["sensor_fusion"]);
 
           double front_speed = object_history.vehicle_close_ahead(
-              previous_path.size(), previous_path.end_s, ego.get_lane());
+              previous_path.size(), previous_path.end_s, ego.get_lane(), ego.s);
 
           std::cout << object_history << '\n';
 
