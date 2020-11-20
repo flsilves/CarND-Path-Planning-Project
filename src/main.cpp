@@ -11,6 +11,7 @@
 #include <spline.h>
 
 #include <json.hpp>
+#include <map>
 
 #include "helpers.h"
 #include "map.h"
@@ -92,24 +93,6 @@ class VehicleState {
   double speed{0.0};
 };
 
-// class State {
-//  KeepLane, PrepareLeft, PrepareRight, ChangeLeft, ChangeRight,
-//};
-//
-// lane 0 class Planner {
-//  // step
-//  // calculate trajectories for left and right lane
-//  // for each trajectory, calculate cost associated
-//
-// public:
-//  // calculate target_speed required for each lane
-//  // control speed to avoid collision -> include acceleration
-//
-//  // calculate costs for each lane
-//  // state
-//  //
-//};
-//
 class Trajectory {
  public:
   Trajectory() = default;
@@ -242,7 +225,7 @@ class Prediction {
   }
 
   double vehicle_close_ahead(int steps_into_future, double ego_future_s,
-                             int ego_lane, double ego_s) {
+                             int ego_lane, double ego_s) const {
     for (auto& vehicle_history : history) {
       if (vehicle_history.empty()) {
         continue;
@@ -272,6 +255,11 @@ class Prediction {
     for (auto& lane_speed : lane_speeds) {
       lane_speed = MAX_LANE_SPEED;
     }
+  }
+
+  unsigned get_fastest_lane() const {
+    auto result = std::max_element(lane_speeds.begin(), lane_speeds.end());
+    return std::distance(lane_speeds.begin(), result);
   }
 
   void reset_gaps() {
@@ -462,6 +450,89 @@ class TrajectoryGenerator {
   const MapWaypoints map;
 };
 
+enum class State {
+  KeepLane,
+  PrepareLeft,
+  ChangeLeft,
+  PrepareRight,
+  ChangeRight
+};
+//
+//// clang-format off
+// static std::map<State, std::vector<State>> transitions{
+//    {State::KeepLane,
+//         {State::KeepLane, State::PrepareLeft, State::PrepareRight}},
+//    {State::PrepareLeft,
+//         {State::KeepLane, State::PrepareLeft, State::ChangeLeft}},
+//    {State::ChangeLeft,
+//         {State::KeepLane, State::ChangeLeft}},
+//    {State::PrepareRight,
+//         {State::KeepLane, State::PrepareRight, State::ChangeRight}},
+//    {State::ChangeRight,
+//         {State::KeepLane, State::ChangeRight}}};
+//// clang-format on
+
+class Planner {
+ public:
+  Planner(const VehicleState& ego, TrajectoryGenerator& gen,
+          const Prediction& predictions, const MapWaypoints& map)
+      : ego(ego),
+        trajectory_generator(gen),
+        map(map),
+        predictions(predictions),
+        state(State::KeepLane) {}
+
+  Trajectory get_trajectory() {
+    double front_speed = predictions.vehicle_close_ahead(
+        trajectory_generator.previous_trajectory_.size(),
+        trajectory_generator.previous_trajectory_.end_s, ego.get_lane(), ego.s);
+
+    if (front_speed < target_velocity) {
+      if (fabs(front_speed - target_velocity) > 1.0) {
+        target_velocity -= .224;
+      } else {
+        target_velocity = front_speed;
+      }
+      //
+    } else {
+      target_velocity += .224;
+    }
+
+    if (state == State::ChangeLeft) {
+      if (ego.get_lane() == target_lane) {
+        state = State::KeepLane;
+      }
+    } else {
+      if (target_velocity > 20.0) {
+        unsigned ideal_lane = predictions.get_fastest_lane();
+        std::cout << "\n****IDEAL:" << ideal_lane << std::endl;
+
+        if (ideal_lane != ego.get_lane() &&
+            fabs(ideal_lane - ego.get_lane()) < 1.1) {
+          if (predictions.predicted_gaps[target_lane].distance_behind > 30.0 &&
+              predictions.predicted_gaps[target_lane].distance_ahead > 30.0) {
+            state = State::ChangeLeft;
+            target_lane = ideal_lane;
+          }
+        }
+      }
+    }
+    return trajectory_generator.generate_trajectory(target_velocity,
+                                                    target_lane);
+  }
+
+ public:
+  //  State state std::array<double, NUMBER_OF_LANES> cost_for_lane;
+  const VehicleState& ego;
+  TrajectoryGenerator& trajectory_generator;
+  const MapWaypoints& map;
+  const Prediction& predictions;
+  State state;
+  double target_velocity;
+  unsigned target_lane{1};
+  // std::unordered_map < State, st
+};
+
 std::ostream& operator<<(std::ostream& os, const Prediction& rhs) {
   os << std::fixed << std::setprecision(2);
   // clang-format off
@@ -497,12 +568,13 @@ int main() {
   int lane = 1;
 
   VehicleState ego;
-  Prediction prediction{map};
   Trajectory previous_trajectory;
   TrajectoryGenerator trajectory_generator(previous_trajectory, ego, map);
+  Prediction prediction{map};
+  Planner motion_planning{ego, trajectory_generator, prediction, map};
 
   h.onMessage([&map, &target_velocity, &lane, &previous_trajectory, &ego,
-               &trajectory_generator,
+               &trajectory_generator, &motion_planning,
                &prediction](uWS::WebSocket<uWS::SERVER> ws, char* data,
                             std::size_t length, uWS::OpCode opCode) {
     if (valid_socket_message(length, data)) {
@@ -531,26 +603,11 @@ int main() {
           double time = distance_traveled / average_speed;
 
           prediction.update_object_history(telemetry_data["sensor_fusion"]);
-          prediction.predict_gaps(ego, previous_trajectory.end_s,
-                                  previous_trajectory.size() * 0.02);
+          prediction.predict_gaps(
+              ego, previous_trajectory.end_s,
+              50 * 0.02);  // TODO PREDICT INTO COMPLETE SIZE OF PATH
 
-          double front_speed = prediction.vehicle_close_ahead(
-              previous_trajectory.size(), previous_trajectory.end_s,
-              ego.get_lane(), ego.s);
-
-          if (front_speed < target_velocity) {
-            if (fabs(front_speed - target_velocity) > 1.0) {
-              target_velocity -= .224;
-            } else {
-              target_velocity = front_speed;
-            }
-            //
-          } else {
-            target_velocity += .224;
-          }
-
-          auto next_path =
-              trajectory_generator.generate_trajectory(target_velocity, lane);
+          auto next_path = motion_planning.get_trajectory();
 
           // LOGGING ------------------------
           std::cout << "|EGO|\n" << ego << "\n\n";
