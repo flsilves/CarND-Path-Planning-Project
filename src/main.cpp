@@ -17,22 +17,24 @@ using nlohmann::json;
 using std::string;
 using std::vector;
 
-// static std::ofstream telemetry_log("./telemetry.log", std::ios::app);
+void print_info(const VehicleState& ego, const VehicleState& previous_ego,
+                const Trajectory& previous_trajectory,
+                const Trajectory& planned_trajectory,
+                const Prediction& prediction);
 
 int main() {
   uWS::Hub h;
 
   VehicleState ego;
   Trajectory previous_trajectory;
-  MapWaypoints map(parameters::map_file, parameters::max_s);
+  MapWaypoints map(MAP_FILEPATH, MAP_MAX_S);
   TrajectoryGenerator trajectory_generator{previous_trajectory, ego, map};
   Prediction prediction{map};
   Planner motion_planning{ego, trajectory_generator, prediction, map};
 
-  h.onMessage([&ego, &previous_trajectory, &map, &trajectory_generator,
-               &prediction, &motion_planning](uWS::WebSocket<uWS::SERVER> ws,
-                                              char* data, std::size_t length,
-                                              uWS::OpCode opCode) {
+  h.onMessage([&ego, &previous_trajectory, &map, &prediction, &motion_planning](
+                  uWS::WebSocket<uWS::SERVER> ws, char* data,
+                  std::size_t length, uWS::OpCode opCode) {
     if (valid_socket_message(length, data)) {
       auto s = hasData(data);
 
@@ -48,44 +50,18 @@ int main() {
           ego.update(telemetry_data);
           previous_trajectory.update(telemetry_data);
 
-          double delta_x = fabs(ego.x - prev_ego.x);
-          double delta_y = fabs(ego.y - prev_ego.y);
-
-          double distance_traveled =
-              sqrt(delta_x * delta_x + delta_y * delta_y);
-
-          double average_speed = (ego.speed / 2 + prev_ego.speed / 2);
-
-          double time = distance_traveled / average_speed;
-
-          prediction.update_object_history(telemetry_data["sensor_fusion"]);
+          prediction.update(telemetry_data["sensor_fusion"]);
           prediction.predict_gaps(
               ego, previous_trajectory.end_s,
               50 * 0.02);  // TODO PREDICT INTO COMPLETE SIZE OF PATH
 
-          auto next_path = motion_planning.get_trajectory();
-
-          // LOGGING ------------------------
-          std::cout << "|EGO|\n" << ego << "\n\n";
-
-          std::cout << "|STEP|\n"
-                    << "t_delta[" << time << "] dist_delta["
-                    << distance_traveled << "] v_avg[" << average_speed << ']'
-                    << "\n\n";
-
-          if (not previous_trajectory.empty()) {
-            std::cout << "|PREV_PATH|\n" << previous_trajectory << "\n\n";
-          }
-
-          std::cout << "|NEXT_PATH|\n" << next_path << "\n\n";
-
-          std::cout << "|OBJECT_HISTORY|\n" << prediction << "\n";
-          std::cout << "--------------------------------" << std::endl;
-          // ---------------------------------
+          auto planned_trajectory = motion_planning.get_trajectory();
+          print_info(ego, prev_ego, previous_trajectory, planned_trajectory,
+                     prediction);
 
           json msgJson;
-          msgJson["next_x"] = next_path.x;
-          msgJson["next_y"] = next_path.y;
+          msgJson["next_x"] = planned_trajectory.x;
+          msgJson["next_y"] = planned_trajectory.y;
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
@@ -116,4 +92,35 @@ int main() {
   }
 
   h.run();
+}
+
+void print_info(const VehicleState& ego, const VehicleState& prev_ego,
+                const Trajectory& previous_trajectory,
+                const Trajectory& planned_trajectory,
+                const Prediction& prediction) {
+  double delta_x = fabs(ego.x - prev_ego.x);
+  double delta_y = fabs(ego.y - prev_ego.y);
+
+  double distance_traveled = sqrt(delta_x * delta_x + delta_y * delta_y);
+
+  double average_speed = (ego.speed / 2 + prev_ego.speed / 2);
+
+  double time = distance_traveled / average_speed;
+
+  // LOGGING ------------------------
+  std::cout << "|EGO|\n" << ego << "\n\n";
+
+  std::cout << "|STEP|\n"
+            << "t_delta[" << time << "] dist_delta[" << distance_traveled
+            << "] v_avg[" << average_speed << ']' << "\n\n";
+
+  if (not previous_trajectory.empty()) {
+    std::cout << "|PREV_PATH|\n" << previous_trajectory << "\n\n";
+  }
+
+  std::cout << "|NEXT_PATH|\n" << planned_trajectory << "\n\n";
+
+  std::cout << "|OBJECT_HISTORY|\n" << prediction << "\n";
+  std::cout << "--------------------------------" << std::endl;
+  // ---------------------------------
 }

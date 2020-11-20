@@ -3,7 +3,7 @@
 
 Prediction::Prediction(const MapWaypoints& map) : map(map){};
 
-void Prediction::update_object_history(nlohmann::json sensor_fusion) {
+void Prediction::update(nlohmann::json sensor_fusion) {
   for (auto& object_entry : sensor_fusion) {
     std::size_t id = object_entry[0];
     double x = object_entry[1];

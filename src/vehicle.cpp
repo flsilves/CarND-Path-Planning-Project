@@ -23,7 +23,7 @@ void VehicleState::update(nlohmann::json telemetry_data) {
   s = telemetry_data["s"];
   d = telemetry_data["d"];
   yaw = telemetry_data["yaw"];      // degrees [positive in ccw direction]
-  speed = telemetry_data["speed"];  // units ??
+  speed = telemetry_data["speed"];  // units m/s
 }
 
 int VehicleState::get_lane(double lane_width) const {
