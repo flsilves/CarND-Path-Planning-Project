@@ -92,35 +92,38 @@ class VehicleState {
   double speed{0.0};
 };
 
-/* class Planner {
-
-  public:
-
-  //state
-  //
-
-
-};
- */
+// class State {
+//  KeepLane, PrepareLeft, PrepareRight, ChangeLeft, ChangeRight,
+//};
+//
+// lane 0 class Planner {
+//  // step
+//  // calculate trajectories for left and right lane
+//  // for each trajectory, calculate cost associated
+//
+// public:
+//  // calculate target_speed required for each lane
+//  // control speed to avoid collision -> include acceleration
+//
+//  // calculate costs for each lane
+//  // state
+//  //
+//};
+//
 class Trajectory {
  public:
-  // Trajectory() = default;
+  Trajectory() = default;
 
-  Trajectory(string path_name = "Trajectory") { name = path_name; }
-
-  Trajectory(const Trajectory& other,
-             const std::string& path_name = "Trajectory")
-      : name(path_name),
-        x(other.x),
+  Trajectory(const Trajectory& other)
+      : x(other.x),
         y(other.y),
+        end_angle(other.end_angle),
         end_s(other.end_s),
-        end_d(other.end_d) {
-    calculate_end_angle();
-  }
+        end_d(other.end_d) {}
 
   void update(json telemetry_data) {
-    x = telemetry_data["previous_trajectory_x"].get<vector<double>>();
-    y = telemetry_data["previous_trajectory_y"].get<vector<double>>();
+    x = telemetry_data["previous_path_x"].get<vector<double>>();
+    y = telemetry_data["previous_path_y"].get<vector<double>>();
     end_s = telemetry_data["end_path_s"];
     end_d = telemetry_data["end_path_d"];
 
@@ -163,7 +166,6 @@ class Trajectory {
   std::size_t size() const { return x.size(); }
 
  public:
-  std::string name{""};
   vector<double> x, y;
   double end_angle{0.0};
   double end_s{0.0}, end_d{0.0};
@@ -171,7 +173,6 @@ class Trajectory {
 
 std::ostream& operator<<(std::ostream& os, const Trajectory& path) {
   os << std::fixed << std::setprecision(2);
-  // os << "[" << path.name << "] ";
   os << "x[" << path.x.front() << " -> " << path.x.back() << "] ";
   os << "y[" << path.y.front() << " -> " << path.y.back() << "] ";
   os << "end_s[" << path.end_s << "] ";
@@ -497,7 +498,7 @@ int main() {
 
   VehicleState ego;
   Prediction prediction{map};
-  Trajectory previous_trajectory("previous_trajectory");
+  Trajectory previous_trajectory;
   TrajectoryGenerator trajectory_generator(previous_trajectory, ego, map);
 
   h.onMessage([&map, &target_velocity, &lane, &previous_trajectory, &ego,
