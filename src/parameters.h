@@ -1,7 +1,6 @@
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
 
-
 constexpr double MPH_2_MPS = 0.44704;
 constexpr auto DETECTED_VEHICLES{12u};
 constexpr auto OBJECT_HISTORY_SIZE{10u};
@@ -13,6 +12,6 @@ namespace parameters {
 const std::string map_file("data/highway_map.csv");
 constexpr auto max_s{6945.554};
 
-}
+}  // namespace parameters
 
 #endif

@@ -1,20 +1,19 @@
 #ifndef PREDICTION_H
 #define PREDICTION_H
 
-#include "vehicle.h"
-#include <json.hpp>
-#include "map.h"
 #include <array>
-#include <iomanip>
-#include "parameters.h"
 #include <deque>
+#include <iomanip>
+#include <json.hpp>
+
+#include "map.h"
+#include "parameters.h"
+#include "vehicle.h"
 
 struct Gap {
   double distance_behind;
   double distance_ahead;
 };
-
-
 
 class Prediction {
  public:
@@ -23,7 +22,6 @@ class Prediction {
 
   double vehicle_close_ahead(int steps_into_future, double ego_future_s,
                              int ego_lane, double ego_s) const;
-
 
   void reset_lane_speeds();
 

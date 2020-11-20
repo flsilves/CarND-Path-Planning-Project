@@ -1,12 +1,12 @@
 #ifndef VEHICLE_H
 #define VEHICLE_H
 
-#include <vector>
 #include <cstdio>
-#include <json.hpp>
 #include <iomanip>
-#include "parameters.h"
+#include <json.hpp>
+#include <vector>
 
+#include "parameters.h"
 
 class VehicleState {
  public:
@@ -17,14 +17,15 @@ class VehicleState {
   VehicleState(std::size_t id, double x, double y, double vx, double vy,
                double s, double d);
 
-  VehicleState get_prediction(double future_time, const std::vector<double>& map_x,
+  VehicleState get_prediction(double future_time,
+                              const std::vector<double>& map_x,
                               const std::vector<double>& map_y);
 
   void update(nlohmann::json telemetry_data);
 
   int get_lane(double lane_width = 4.0) const;
   bool evaluate_continuity(VehicleState next);
-   bool in_right_side_of_road();
+  bool in_right_side_of_road();
 
  public:
   std::size_t id{42};

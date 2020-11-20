@@ -1,12 +1,11 @@
 #ifndef TRAJECTORY_H
 #define TRAJECTORY_H
 
-#include <vector>
-#include <json.hpp>
-#include "parameters.h"
 #include <iomanip>
+#include <json.hpp>
+#include <vector>
 
-
+#include "parameters.h"
 
 class Trajectory {
  public:
@@ -25,7 +24,7 @@ class Trajectory {
 
   bool empty() const;
   std::size_t size() const;
- 
+
  public:
   std::vector<double> x, y;
   double end_angle{0.0};
@@ -33,6 +32,5 @@ class Trajectory {
 };
 
 std::ostream& operator<<(std::ostream& os, const Trajectory& path);
-
 
 #endif

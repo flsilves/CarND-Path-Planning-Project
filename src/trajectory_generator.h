@@ -1,12 +1,12 @@
 #ifndef TRAJECTORY_GENERATOR_H
 #define TRAJECTORY_GENERATOR_H
 
-#include "map.h"
-#include "vehicle.h"
-#include "trajectory.h"
 #include <spline.h>
-#include "parameters.h"
 
+#include "map.h"
+#include "parameters.h"
+#include "trajectory.h"
+#include "vehicle.h"
 
 class TrajectoryGenerator {
  public:
