@@ -103,7 +103,9 @@ class Path {
         x(other.x),
         y(other.y),
         end_s(other.end_s),
-        end_d(other.end_d) {}
+        end_d(other.end_d) {
+    calculate_end_angle();
+  }
 
   void update(json telemetry_data) {
     x = telemetry_data["previous_path_x"].get<vector<double>>();
@@ -114,6 +116,28 @@ class Path {
     if (x.size() != y.size()) {
       throw std::runtime_error(
           "Path::update(): x and y have different lengths");
+    }
+  }
+
+  double calculate_end_angle() {
+    if (x.size() > 2 && y.size() > 2) {
+      double x2 = x.end()[-1];
+      double y2 = y.end()[-1];
+      double x1 = x.end()[-2];
+      double y1 = y.end()[-2];
+      end_angle = atan2(y2 - y1, x2 - x1);
+    }
+    return end_angle;
+  }
+
+  void calculate_end_frenet(const vector<double>& map_x,
+                            const vector<double>& map_y) {
+    double theta = calculate_end_angle();
+
+    if (not x.empty() && not y.empty()) {
+      auto v = getFrenet(x.back(), y.back(), theta, map_x, map_y);
+      end_s = v[0];
+      end_d = v[1];
     }
   }
 
@@ -130,6 +154,7 @@ class Path {
  public:
   std::string name{""};
   vector<double> x, y;
+  double end_angle{0.0};
   double end_s{0.0}, end_d{0.0};
 };
 
@@ -313,7 +338,7 @@ class TrajectoryGenerator {
     const unsigned extra_anchors = 2;
     const unsigned path_length = 50;
 
-    anchors_init();
+    anchors_init();  // move this outside -> just call once per cycle
     anchors_trim();
     anchors_add(anchor_spacement, extra_anchors, target_lane);
     anchors_recenter();
@@ -322,7 +347,7 @@ class TrajectoryGenerator {
 
     auto generated_path = previous_path_;
 
-    generated_path.trim(10);
+    // generated_path.trim(10);
 
     auto missing_points = path_length - generated_path.size();
 
@@ -337,6 +362,9 @@ class TrajectoryGenerator {
       generated_path.x.push_back(x * cos(ref_yaw) - y * sin(ref_yaw) + ref_x);
       generated_path.y.push_back(x * sin(ref_yaw) + y * cos(ref_yaw) + ref_y);
     }
+
+    generated_path.calculate_end_frenet(map.x, map.y);
+
     return generated_path;
   }
 
