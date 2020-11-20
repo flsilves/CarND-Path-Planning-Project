@@ -92,13 +92,24 @@ class VehicleState {
   double speed{0.0};
 };
 
-class Path {
+/* class Planner {
+
+  public:
+
+  //state
+  //
+
+
+};
+ */
+class Trajectory {
  public:
-  // Path() = default;
+  // Trajectory() = default;
 
-  Path(string path_name = "Path") { name = path_name; }
+  Trajectory(string path_name = "Trajectory") { name = path_name; }
 
-  Path(const Path& other, const std::string& path_name = "Path")
+  Trajectory(const Trajectory& other,
+             const std::string& path_name = "Trajectory")
       : name(path_name),
         x(other.x),
         y(other.y),
@@ -108,14 +119,14 @@ class Path {
   }
 
   void update(json telemetry_data) {
-    x = telemetry_data["previous_path_x"].get<vector<double>>();
-    y = telemetry_data["previous_path_y"].get<vector<double>>();
+    x = telemetry_data["previous_trajectory_x"].get<vector<double>>();
+    y = telemetry_data["previous_trajectory_y"].get<vector<double>>();
     end_s = telemetry_data["end_path_s"];
     end_d = telemetry_data["end_path_d"];
 
     if (x.size() != y.size()) {
       throw std::runtime_error(
-          "Path::update(): x and y have different lengths");
+          "Trajectory::update(): x and y have different lengths");
     }
   }
 
@@ -158,7 +169,7 @@ class Path {
   double end_s{0.0}, end_d{0.0};
 };
 
-std::ostream& operator<<(std::ostream& os, const Path& path) {
+std::ostream& operator<<(std::ostream& os, const Trajectory& path) {
   os << std::fixed << std::setprecision(2);
   // os << "[" << path.name << "] ";
   os << "x[" << path.x.front() << " -> " << path.x.back() << "] ";
@@ -329,11 +340,11 @@ class Prediction {
 
 class TrajectoryGenerator {
  public:
-  TrajectoryGenerator(const Path& previous_path, const VehicleState& ego,
-                      const MapWaypoints& map)
-      : previous_path_(previous_path), ego_(ego), map(map) {}
+  TrajectoryGenerator(const Trajectory& previous_trajectory,
+                      const VehicleState& ego, const MapWaypoints& map)
+      : previous_trajectory_(previous_trajectory), ego_(ego), map(map) {}
 
-  Path generate_trajectory(double target_velocity, int target_lane) {
+  Trajectory generate_trajectory(double target_velocity, int target_lane) {
     const double anchor_spacement = 50.0;
     const unsigned extra_anchors = 2;
     const unsigned path_length = 50;
@@ -345,7 +356,7 @@ class TrajectoryGenerator {
 
     spline.set_points(anchors_x, anchors_y);
 
-    auto generated_path = previous_path_;
+    auto generated_path = previous_trajectory_;
 
     // generated_path.trim(10);
 
@@ -385,7 +396,7 @@ class TrajectoryGenerator {
     anchors_y.clear();
     ref_yaw = deg2rad(ego_.yaw);
 
-    std::size_t prev_size = previous_path_.size();
+    std::size_t prev_size = previous_trajectory_.size();
 
     if (prev_size < 2) {
       anchors_x.push_back(ego_.x - cos(ref_yaw));
@@ -394,11 +405,11 @@ class TrajectoryGenerator {
       anchors_y.push_back(ego_.y - sin(ref_yaw));
       anchors_y.push_back(ego_.y);
     } else {
-      ref_x = previous_path_.x.end()[-1];
-      ref_y = previous_path_.y.end()[-1];
+      ref_x = previous_trajectory_.x.end()[-1];
+      ref_y = previous_trajectory_.y.end()[-1];
 
-      double ref_x_prev = previous_path_.x.end()[-2];
-      double ref_y_prev = previous_path_.y.end()[-2];
+      double ref_x_prev = previous_trajectory_.x.end()[-2];
+      double ref_y_prev = previous_trajectory_.y.end()[-2];
 
       ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
 
@@ -445,7 +456,7 @@ class TrajectoryGenerator {
   tk::spline spline;
   std::vector<double> anchors_x, anchors_y;
   double ref_yaw, ref_x, ref_y;
-  const Path& previous_path_;
+  const Trajectory& previous_trajectory_;
   const VehicleState& ego_;
   const MapWaypoints map;
 };
@@ -486,10 +497,10 @@ int main() {
 
   VehicleState ego;
   Prediction prediction{map};
-  Path previous_path("previous_path");
-  TrajectoryGenerator trajectory_generator(previous_path, ego, map);
+  Trajectory previous_trajectory("previous_trajectory");
+  TrajectoryGenerator trajectory_generator(previous_trajectory, ego, map);
 
-  h.onMessage([&map, &target_velocity, &lane, &previous_path, &ego,
+  h.onMessage([&map, &target_velocity, &lane, &previous_trajectory, &ego,
                &trajectory_generator,
                &prediction](uWS::WebSocket<uWS::SERVER> ws, char* data,
                             std::size_t length, uWS::OpCode opCode) {
@@ -506,7 +517,7 @@ int main() {
           VehicleState prev_ego{ego};
 
           ego.update(telemetry_data);
-          previous_path.update(telemetry_data);
+          previous_trajectory.update(telemetry_data);
 
           double delta_x = fabs(ego.x - prev_ego.x);
           double delta_y = fabs(ego.y - prev_ego.y);
@@ -519,11 +530,12 @@ int main() {
           double time = distance_traveled / average_speed;
 
           prediction.update_object_history(telemetry_data["sensor_fusion"]);
-          prediction.predict_gaps(ego, previous_path.end_s,
-                                  previous_path.size() * 0.02);
+          prediction.predict_gaps(ego, previous_trajectory.end_s,
+                                  previous_trajectory.size() * 0.02);
 
           double front_speed = prediction.vehicle_close_ahead(
-              previous_path.size(), previous_path.end_s, ego.get_lane(), ego.s);
+              previous_trajectory.size(), previous_trajectory.end_s,
+              ego.get_lane(), ego.s);
 
           if (front_speed < target_velocity) {
             if (fabs(front_speed - target_velocity) > 1.0) {
@@ -547,8 +559,8 @@ int main() {
                     << distance_traveled << "] v_avg[" << average_speed << ']'
                     << "\n\n";
 
-          if (not previous_path.empty()) {
-            std::cout << "|PREV_PATH|\n" << previous_path << "\n\n";
+          if (not previous_trajectory.empty()) {
+            std::cout << "|PREV_PATH|\n" << previous_trajectory << "\n\n";
           }
 
           std::cout << "|NEXT_PATH|\n" << next_path << "\n\n";
