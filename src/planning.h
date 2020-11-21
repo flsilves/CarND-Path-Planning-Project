@@ -24,13 +24,13 @@ class Planner {
   Trajectory get_trajectory();
 
  public:
-  const VehicleState& ego;
-  TrajectoryGenerator& trajectory_generator;
-  const MapWaypoints& map;
-  const Prediction& predictions;
   State state;
   double target_velocity;
   unsigned target_lane{1};
+  TrajectoryGenerator& trajectory_generator;
+  const VehicleState& ego;
+  const MapWaypoints& map;
+  const Prediction& predictions;
 };
 
 #endif

@@ -25,8 +25,8 @@ void print_info(const VehicleState& ego, const VehicleState& previous_ego,
 int main() {
   uWS::Hub h;
 
-  VehicleState ego;
-  Trajectory previous_trajectory;
+  VehicleState ego{};
+  Trajectory previous_trajectory{};
   MapWaypoints map(MAP_FILEPATH, MAP_MAX_S);
   TrajectoryGenerator trajectory_generator{previous_trajectory, ego, map};
   Prediction prediction{map};
@@ -43,19 +43,25 @@ int main() {
         auto event = j[0].get<string>();
 
         if (event == "telemetry") {
-          auto telemetry_data = j[1];
+          auto data = j[1];
 
           VehicleState prev_ego{ego};
 
-          ego.update(telemetry_data);
-          previous_trajectory.update(telemetry_data);
+          ego.update(data["x"], data["y"], data["s"], data["d"], data["yaw"],
+                     data["speed"]);
 
-          prediction.update(telemetry_data["sensor_fusion"]);
+          previous_trajectory.update(
+              data["previous_path_x"].get<std::vector<double>>(),
+              data["previous_path_y"].get<std::vector<double>>(),
+              data["end_path_s"], data["end_path_d"]);
+
+          prediction.update(data["sensor_fusion"]);
           prediction.predict_gaps(
               ego, previous_trajectory.end_s,
               50 * 0.02);  // TODO PREDICT INTO COMPLETE SIZE OF PATH
 
           auto planned_trajectory = motion_planning.get_trajectory();
+
           print_info(ego, prev_ego, previous_trajectory, planned_trajectory,
                      prediction);
 
@@ -70,7 +76,7 @@ int main() {
         std::string msg = "42[\"manual\",{}]";
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
-    }  // end websocket if
+    }
   });  // end h.onMessage
 
   h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
@@ -107,12 +113,14 @@ void print_info(const VehicleState& ego, const VehicleState& prev_ego,
 
   double time = distance_traveled / average_speed;
 
-  // LOGGING ------------------------
-  std::cout << "|EGO|\n" << ego << "\n\n";
+  // clang-format off
+  std::cout << "|EGO|\n" 
+            << ego << "\n\n";
 
   std::cout << "|STEP|\n"
-            << "t_delta[" << time << "] dist_delta[" << distance_traveled
-            << "] v_avg[" << average_speed << ']' << "\n\n";
+            << "t_delta[" << time << "] "
+            << "dist_delta[" << distance_traveled << "] "
+            << "v_avg[" << average_speed << "]\n\n";
 
   if (not previous_trajectory.empty()) {
     std::cout << "|PREV_PATH|\n" << previous_trajectory << "\n\n";
@@ -120,7 +128,7 @@ void print_info(const VehicleState& ego, const VehicleState& prev_ego,
 
   std::cout << "|NEXT_PATH|\n" << planned_trajectory << "\n\n";
 
-  std::cout << "|OBJECT_HISTORY|\n" << prediction << "\n";
+  std::cout << "|ROAD VEHICLES|\n" << prediction << "\n";
   std::cout << "--------------------------------" << std::endl;
-  // ---------------------------------
+  // clang-format onOBJECT_HISTORY
 }

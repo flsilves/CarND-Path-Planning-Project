@@ -9,11 +9,13 @@ Trajectory::Trajectory(const Trajectory& other)
       end_s(other.end_s),
       end_d(other.end_d) {}
 
-void Trajectory::update(nlohmann::json telemetry_data) {
-  x = telemetry_data["previous_path_x"].get<std::vector<double>>();
-  y = telemetry_data["previous_path_y"].get<std::vector<double>>();
-  end_s = telemetry_data["end_path_s"];
-  end_d = telemetry_data["end_path_d"];
+void Trajectory::update(const std::vector<double>& x_,
+                        const std::vector<double>& y_, double end_s_,
+                        double end_d_) {
+  x = x_;
+  y = y_;
+  end_s = end_s_;
+  end_d = end_d_;
 
   if (x.size() != y.size()) {
     throw std::runtime_error(

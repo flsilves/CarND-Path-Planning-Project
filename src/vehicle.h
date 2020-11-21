@@ -21,7 +21,7 @@ class VehicleState {
                               const std::vector<double>& map_x,
                               const std::vector<double>& map_y);
 
-  void update(nlohmann::json telemetry_data);
+  void update(double x, double y, double s, double d, double yaw, double speed);
 
   int get_lane(double lane_width = 4.0) const;
   bool evaluate_continuity(VehicleState next);

@@ -1,8 +1,6 @@
 
 #include "vehicle.h"
 
-#include <json.hpp>
-
 #include "helpers.h"
 
 using std::vector;
@@ -17,13 +15,14 @@ VehicleState::VehicleState(std::size_t id, double x, double y, double vx,
   }
 }
 
-void VehicleState::update(nlohmann::json telemetry_data) {
-  x = telemetry_data["x"];
-  y = telemetry_data["y"];
-  s = telemetry_data["s"];
-  d = telemetry_data["d"];
-  yaw = telemetry_data["yaw"];      // degrees [positive in ccw direction]
-  speed = telemetry_data["speed"];  // units m/s
+void VehicleState::update(double x_, double y_, double s_, double d_,
+                          double yaw_, double speed_) {
+  x = x_;
+  y = y_;
+  s = s_;
+  d = d_;
+  yaw = yaw_;      // degrees [positive in ccw direction]
+  speed = speed_;  // units m/s
 }
 
 int VehicleState::get_lane(double lane_width) const {

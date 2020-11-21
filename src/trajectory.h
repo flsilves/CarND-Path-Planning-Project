@@ -2,7 +2,6 @@
 #define TRAJECTORY_H
 
 #include <iomanip>
-#include <json.hpp>
 #include <vector>
 
 #include "parameters.h"
@@ -13,7 +12,8 @@ class Trajectory {
 
   Trajectory(const Trajectory& other);
 
-  void update(nlohmann::json telemetry_data);
+  void update(const std::vector<double>& x, const std::vector<double>& y,
+              double end_s, double end_d);
 
   double calculate_end_angle();
 

@@ -35,6 +35,10 @@ std::vector<double> getXY(double s, double d, const std::vector<double> &maps_s,
                           const std::vector<double> &maps_x,
                           const std::vector<double> &maps_y);
 
+double mps2mph(double mps);
+
+double mph2mps(double mph);
+
 bool valid_socket_message(std::size_t length, char *socket_event);
 
 #endif  // HELPERS_H
