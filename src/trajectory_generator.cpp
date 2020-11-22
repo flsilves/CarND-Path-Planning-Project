@@ -10,8 +10,8 @@ TrajectoryGenerator::TrajectoryGenerator(const Trajectory& previous_trajectory,
                                          const VehicleState& ego,
                                          const MapWaypoints& map,
                                          const Prediction& predictions)
-    : previous_trajectory_(previous_trajectory),
-      ego_(ego),
+    : previous_trajectory(previous_trajectory),
+      ego(ego),
       map(map),
       predictions(predictions) {}
 
@@ -27,12 +27,12 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned target_lane) {
 
   spline.set_points(anchors_x, anchors_y);
 
-  auto generated_path = previous_trajectory_;
+  auto generated_path = previous_trajectory;
 
   generated_path.trim(10);
   // generated_path.trim(10);
 
-  auto target_velocity = ego_.speed + MAX_ACCELERATION;
+  auto target_velocity = ego.speed + MAX_ACCELERATION;
 
   auto missing_points = path_length - generated_path.size();
 
@@ -67,22 +67,22 @@ double TrajectoryGenerator::get_x_increment(double target_velocity) {
 void TrajectoryGenerator::anchors_init() {
   anchors_x.clear();
   anchors_y.clear();
-  ref_yaw = deg2rad(ego_.yaw);
+  ref_yaw = deg2rad(ego.yaw);
 
-  std::size_t prev_size = previous_trajectory_.size();
+  std::size_t prev_size = previous_trajectory.size();
 
   if (prev_size < 2) {
-    anchors_x.push_back(ego_.x - cos(ref_yaw));
-    anchors_x.push_back(ego_.x);
+    anchors_x.push_back(ego.x - cos(ref_yaw));
+    anchors_x.push_back(ego.x);
 
-    anchors_y.push_back(ego_.y - sin(ref_yaw));
-    anchors_y.push_back(ego_.y);
+    anchors_y.push_back(ego.y - sin(ref_yaw));
+    anchors_y.push_back(ego.y);
   } else {
-    ref_x = previous_trajectory_.x.end()[-1];
-    ref_y = previous_trajectory_.y.end()[-1];
+    ref_x = previous_trajectory.x.end()[-1];
+    ref_y = previous_trajectory.y.end()[-1];
 
-    double ref_x_prev = previous_trajectory_.x.end()[-2];
-    double ref_y_prev = previous_trajectory_.y.end()[-2];
+    double ref_x_prev = previous_trajectory.x.end()[-2];
+    double ref_y_prev = previous_trajectory.y.end()[-2];
 
     ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
 
@@ -101,7 +101,7 @@ void TrajectoryGenerator::anchors_init() {
 void TrajectoryGenerator::anchors_add(double anchor_spacement,
                                       unsigned extra_anchors, int target_lane) {
   for (auto i = 1u; i <= extra_anchors; ++i) {
-    auto next_anchor = getXY(ego_.s + (i) * (anchor_spacement),
+    auto next_anchor = getXY(ego.s + (i) * (anchor_spacement),
                              (2 + 4 * target_lane), map.s, map.x, map.y);
 
     anchors_x.emplace_back(next_anchor[0]);

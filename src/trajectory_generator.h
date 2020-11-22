@@ -27,8 +27,8 @@ class TrajectoryGenerator {
  public:
   std::vector<double> anchors_x, anchors_y;
   double ref_yaw, ref_x, ref_y;
-  const Trajectory& previous_trajectory_;
-  const VehicleState& ego_;
+  const Trajectory& previous_trajectory;
+  const VehicleState& ego;
   const MapWaypoints map;
   const Prediction& predictions;
 };
