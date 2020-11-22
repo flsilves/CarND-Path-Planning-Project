@@ -7,13 +7,13 @@
 #include "parameters.h"
 #include "trajectory.h"
 #include "vehicle.h"
-
+#include "prediction.h"
 class TrajectoryGenerator {
  public:
   TrajectoryGenerator(const Trajectory& previous_trajectory,
-                      const VehicleState& ego, const MapWaypoints& map);
+                      const VehicleState& ego, const MapWaypoints& map, const Prediction& predictions);
 
-  Trajectory generate_trajectory(double target_velocity, int target_lane);
+  Trajectory generate_trajectory(unsigned target_lane);
 
  private:
   double get_x_increment(double target_velocity);
@@ -30,6 +30,7 @@ class TrajectoryGenerator {
   const Trajectory& previous_trajectory_;
   const VehicleState& ego_;
   const MapWaypoints map;
+  const Prediction& predictions;
 };
 
 #endif

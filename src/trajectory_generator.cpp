@@ -8,11 +8,14 @@ static tk::spline spline;
 
 TrajectoryGenerator::TrajectoryGenerator(const Trajectory& previous_trajectory,
                                          const VehicleState& ego,
-                                         const MapWaypoints& map)
-    : previous_trajectory_(previous_trajectory), ego_(ego), map(map) {}
+                                         const MapWaypoints& map,
+                                         const Prediction& predictions)
+    : previous_trajectory_(previous_trajectory),
+      ego_(ego),
+      map(map),
+      predictions(predictions) {}
 
-Trajectory TrajectoryGenerator::generate_trajectory(double target_velocity,
-                                                    int target_lane) {
+Trajectory TrajectoryGenerator::generate_trajectory(unsigned target_lane) {
   const double anchor_spacement = 50.0;
   const unsigned extra_anchors = 2;
   const unsigned path_length = 50;
@@ -26,7 +29,10 @@ Trajectory TrajectoryGenerator::generate_trajectory(double target_velocity,
 
   auto generated_path = previous_trajectory_;
 
+  generated_path.trim(10);
   // generated_path.trim(10);
+
+  auto target_velocity = ego_.speed + MAX_ACCELERATION;
 
   auto missing_points = path_length - generated_path.size();
 

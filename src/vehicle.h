@@ -21,6 +21,9 @@ class VehicleState {
                               const std::vector<double>& map_x,
                               const std::vector<double>& map_y);
 
+  bool left_lane_exists() const;
+  bool right_lane_exists() const;
+
   void update(double x, double y, double s, double d, double yaw, double speed);
 
   int get_lane(double lane_width = 4.0) const;

@@ -29,6 +29,10 @@ int VehicleState::get_lane(double lane_width) const {
   return fmax(fmin(2, floor(d / lane_width)), 0);
 }
 
+bool VehicleState::left_lane_exists() const { return d > 4.0; }
+
+bool VehicleState::right_lane_exists() const { return d < 12.0; }
+
 bool VehicleState::evaluate_continuity(VehicleState next) {
   return (abs(next.speed - speed) < 3.0) && (abs(next.x - x) < 5.0) &&
          (abs(next.y - y) < 5.0);

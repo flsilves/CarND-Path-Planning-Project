@@ -20,11 +20,16 @@ class Planner {
  public:
   Planner(const VehicleState& ego, TrajectoryGenerator& gen,
           const Prediction& predictions, const MapWaypoints& map);
+  Planner step();
 
   Trajectory get_trajectory();
 
+  Trajectory plan_trajectory(const std::string& candidate_state);
+
+  std::vector<std::string> successor_states();
+
  public:
-  State state;
+  std::string state{std::string("KL")};
   double target_velocity;
   unsigned target_lane{1};
   TrajectoryGenerator& trajectory_generator;

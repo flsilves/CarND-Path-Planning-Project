@@ -28,8 +28,9 @@ int main() {
   VehicleState ego{};
   Trajectory previous_trajectory{};
   MapWaypoints map(MAP_FILEPATH, MAP_MAX_S);
-  TrajectoryGenerator trajectory_generator{previous_trajectory, ego, map};
   Prediction prediction{map};
+  TrajectoryGenerator trajectory_generator{previous_trajectory, ego, map,
+                                           prediction};
   Planner motion_planning{ego, trajectory_generator, prediction, map};
 
   h.onMessage([&ego, &previous_trajectory, &map, &prediction, &motion_planning](

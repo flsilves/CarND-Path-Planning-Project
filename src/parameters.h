@@ -3,6 +3,8 @@
 
 constexpr double MPH_2_MPS{0.44704};
 constexpr auto MAX_LANE_SPEED{50.0};
+constexpr auto MAX_ACCELERATION{0.8}; // m/s per point
+
 
 constexpr auto NUMBER_OF_LANES{3u};
 constexpr auto MAP_MAX_S{6945.554};
