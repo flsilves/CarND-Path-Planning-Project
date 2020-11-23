@@ -38,4 +38,6 @@ class Planner {
   const Prediction& predictions;
 };
 
+std::ostream& operator<<(std::ostream& os, const Planner& planner);
+
 #endif

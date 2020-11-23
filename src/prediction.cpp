@@ -130,8 +130,8 @@ void Prediction::predict_gaps(VehicleState ego, double future_ego_s,
       }
     }
 
-    std::cout << "vehicle.s[" << traffic_vehicle.s << "] ego.s[" << ego.s
-              << "]";
+    // std::cout << "vehicle.s[" << traffic_vehicle.s << "] ego.s[" << ego.s
+    //          << "]";
     if ((traffic_vehicle.s > ego.s) &&
         (traffic_vehicle.s < (ego.s + TRAFFIC_SPEED_HORIZON_DISTANCE))) {
       lane_speed = fmin(lane_speed, traffic_vehicle.speed);

@@ -20,7 +20,7 @@ using std::vector;
 void print_info(const VehicleState& ego, const VehicleState& previous_ego,
                 const Trajectory& previous_trajectory,
                 const Trajectory& planned_trajectory,
-                const Prediction& prediction);
+                const Prediction& prediction, const Planner& planning);
 
 int main() {
   uWS::Hub h;
@@ -64,7 +64,7 @@ int main() {
           auto planned_trajectory = motion_planning.get_trajectory();
 
           print_info(ego, prev_ego, previous_trajectory, planned_trajectory,
-                     prediction);
+                     prediction, motion_planning);
 
           json msgJson;
           msgJson["next_x"] = planned_trajectory.x;
@@ -104,7 +104,7 @@ int main() {
 void print_info(const VehicleState& ego, const VehicleState& prev_ego,
                 const Trajectory& previous_trajectory,
                 const Trajectory& planned_trajectory,
-                const Prediction& prediction) {
+                const Prediction& prediction, const Planner& planner) {
   double delta_x = fabs(ego.x - prev_ego.x);
   double delta_y = fabs(ego.y - prev_ego.y);
 
@@ -122,6 +122,9 @@ void print_info(const VehicleState& ego, const VehicleState& prev_ego,
             << "t_delta[" << time << "] "
             << "dist_delta[" << distance_traveled << "] "
             << "v_avg[" << average_speed << "]\n\n";
+
+  std::cout << "|PLANNER|\n"
+            << planner << "\n\n";            
 
   if (not previous_trajectory.empty()) {
     std::cout << "|PREV_PATH|\n" << previous_trajectory << "\n\n";

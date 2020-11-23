@@ -78,6 +78,14 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
   return trajectory;
 }
 
+std::ostream& operator<<(std::ostream& os, const Planner& planner) {
+  os << std::fixed << std::setprecision(2);
+  os << "state[" << planner.state << "] ";
+  os << "target_velocity[" << planner.target_velocity << "] ";
+  os << "target_lane[" << planner.target_lane << "] ";
+  return os;
+}
+
 /* Trajectory Planner::get_trajectory() {
   double front_speed = predictions.vehicle_close_ahead(
       trajectory_generator.previous_trajectory_.size(),
