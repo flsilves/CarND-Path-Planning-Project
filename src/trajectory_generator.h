@@ -14,7 +14,8 @@ class TrajectoryGenerator {
                       const VehicleState& ego, const MapWaypoints& map,
                       const Prediction& predictions);
 
-  Trajectory generate_trajectory(unsigned target_lane);
+  Trajectory generate_trajectory(unsigned end_lane, unsigned intended_lane);
+
 
   void anchors_init();
 
@@ -26,6 +27,7 @@ class TrajectoryGenerator {
 
   void anchors_recenter();
   void anchors_trim();
+
   void fill_trajectory_points(Trajectory& trajectory, double target_velocity,
                               unsigned end_lane);
 

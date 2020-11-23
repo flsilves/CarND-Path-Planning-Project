@@ -30,6 +30,12 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
   auto new_trajectory = previous_trajectory;
   new_trajectory.trim(10);
 
+  // if(end lane != current lane) -> trim
+
+  // predict where front and rear car are going to be at 50
+
+  // calculate velocity for safe distance
+
   // clang-format off
   // if(lane_change) // trim current path -> validate at the end for collisions -> return empty if not valid
   // if(prepare) // evaluate gap -> calculate velocity for maneuver

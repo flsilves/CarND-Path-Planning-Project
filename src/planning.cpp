@@ -65,11 +65,14 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
   unsigned intended_lane = ego.get_lane() + lane_direction[candidate_state];
 
   if (state.compare("KL") == 0) {
-    trajectory = trajectory_generator.generate_trajectory(intended_lane);
+    trajectory =
+        trajectory_generator.generate_trajectory(intended_lane, ego.get_lane());
   } else if (state.compare("LCL") == 0 || state.compare("LCR") == 0) {
-    trajectory = trajectory_generator.generate_trajectory(intended_lane);
+    trajectory =
+        trajectory_generator.generate_trajectory(intended_lane, ego.get_lane());
   } else if (state.compare("PLCL") == 0 || state.compare("PLCR") == 0) {
-    trajectory = trajectory_generator.generate_trajectory(intended_lane);
+    trajectory =
+        trajectory_generator.generate_trajectory(intended_lane, ego.get_lane());
   }
 
   return trajectory;
