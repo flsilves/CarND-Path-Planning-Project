@@ -15,26 +15,50 @@ TrajectoryGenerator::TrajectoryGenerator(const Trajectory& previous_trajectory,
       map(map),
       predictions(predictions) {}
 
-Trajectory TrajectoryGenerator::generate_trajectory(unsigned target_lane) {
+double TrajectoryGenerator::calculate_velocity(
+    double previous_velocity) {  // avs
+  if (ego.speed <= TARGET_EGO_SPEED) {
+    return fmin(previous_velocity + MAX_ACCELERATION,
+                previous_velocity + (TARGET_EGO_SPEED - previous_velocity));
+  } else {
+    return TARGET_EGO_SPEED;
+  }
+}
+
+Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
+                                                    unsigned intended_lane) {
+  auto new_trajectory = previous_trajectory;
+  new_trajectory.trim(10);
+
+  // clang-format off
+  // if(lane_change) // trim current path -> validate at the end for collisions -> return empty if not valid
+  // if(prepare) // evaluate gap -> calculate velocity for maneuver
+  // if(keep lane) // check for gap or cutting in vehicles
+  // clang-format on
+
+  auto target_velocity = calculate_velocity(previous_trajectory.end_velocity);
+
+  fill_trajectory_points(new_trajectory, target_velocity, end_lane);
+  new_trajectory.calculate_end_frenet(map.x, map.y);
+  new_trajectory.end_velocity = target_velocity;
+
+  return new_trajectory;
+}
+
+void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
+                                                 double target_velocity,
+                                                 unsigned end_lane) {
   const double anchor_spacement = 50.0;
   const unsigned extra_anchors = 2;
   const unsigned path_length = 50;
 
-  anchors_init();  // move this outside -> just call once per cycle
   anchors_trim();
-  anchors_add(anchor_spacement, extra_anchors, target_lane);
+  anchors_add(anchor_spacement, extra_anchors, end_lane);
   anchors_recenter();
 
   spline.set_points(anchors_x, anchors_y);
 
-  auto generated_path = previous_trajectory;
-
-  generated_path.trim(10);
-  // generated_path.trim(10);
-
-  auto target_velocity = ego.speed + MAX_ACCELERATION;
-
-  auto missing_points = path_length - generated_path.size();
+  auto missing_points = path_length - trajectory.size();
 
   auto x_increment = get_x_increment(target_velocity);
 
@@ -44,13 +68,9 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned target_lane) {
     x = x + x_increment;
     y = spline(x);
 
-    generated_path.x.push_back(x * cos(ref_yaw) - y * sin(ref_yaw) + ref_x);
-    generated_path.y.push_back(x * sin(ref_yaw) + y * cos(ref_yaw) + ref_y);
+    trajectory.x.push_back(x * cos(ref_yaw) - y * sin(ref_yaw) + ref_x);
+    trajectory.y.push_back(x * sin(ref_yaw) + y * cos(ref_yaw) + ref_y);
   }
-
-  generated_path.calculate_end_frenet(map.x, map.y);
-
-  return generated_path;
 }
 
 double TrajectoryGenerator::get_x_increment(double target_velocity) {
@@ -58,9 +78,9 @@ double TrajectoryGenerator::get_x_increment(double target_velocity) {
 
   double horizon_x = 30.0;
   double horizon_y = spline(horizon_x);
-  double target_dist =
+  double target_distance =
       sqrt((horizon_x) * (horizon_x) + (horizon_y) * (horizon_y));
-  double N = target_dist / (time_per_point * target_velocity * MPH_2_MPS);
+  double N = target_distance / (time_per_point * target_velocity * MPH_2_MPS);
   return horizon_x / N;
 }
 

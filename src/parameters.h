@@ -3,6 +3,8 @@
 
 constexpr double MPH_2_MPS{0.44704};
 constexpr auto MAX_LANE_SPEED{50.0};
+constexpr auto TARGET_EGO_SPEED{49.5};
+
 constexpr auto MAX_ACCELERATION{0.8}; // m/s per point
 
 

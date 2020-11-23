@@ -5,24 +5,29 @@
 
 #include "map.h"
 #include "parameters.h"
+#include "prediction.h"
 #include "trajectory.h"
 #include "vehicle.h"
-#include "prediction.h"
 class TrajectoryGenerator {
  public:
   TrajectoryGenerator(const Trajectory& previous_trajectory,
-                      const VehicleState& ego, const MapWaypoints& map, const Prediction& predictions);
+                      const VehicleState& ego, const MapWaypoints& map,
+                      const Prediction& predictions);
 
   Trajectory generate_trajectory(unsigned target_lane);
 
- private:
-  double get_x_increment(double target_velocity);
   void anchors_init();
+
+ private:
+  double calculate_velocity(double previous_velocity);
+  double get_x_increment(double target_velocity);
   void anchors_add(double anchor_spacement, unsigned extra_anchors,
                    int target_lane);
 
   void anchors_recenter();
   void anchors_trim();
+  void fill_trajectory_points(Trajectory& trajectory, double target_velocity,
+                              unsigned end_lane);
 
  public:
   std::vector<double> anchors_x, anchors_y;

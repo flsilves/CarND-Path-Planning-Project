@@ -60,6 +60,8 @@ Trajectory Planner::get_trajectory() {
 Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
   Trajectory trajectory;
 
+  trajectory_generator.anchors_init();
+
   unsigned intended_lane = ego.get_lane() + lane_direction[candidate_state];
 
   if (state.compare("KL") == 0) {

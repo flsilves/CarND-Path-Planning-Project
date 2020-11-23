@@ -29,6 +29,8 @@ class Trajectory {
   std::vector<double> x, y;
   double end_angle{0.0};
   double end_s{0.0}, end_d{0.0};
+  double end_velocity{0.0};
+  unsigned intended_lane{1}, end_lane{1};
 };
 
 std::ostream& operator<<(std::ostream& os, const Trajectory& path);
