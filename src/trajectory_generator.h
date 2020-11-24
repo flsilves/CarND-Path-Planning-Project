@@ -16,12 +16,15 @@ class TrajectoryGenerator {
 
   Trajectory generate_trajectory(unsigned end_lane, unsigned intended_lane);
 
-
   void anchors_init();
 
  private:
   double calculate_velocity(double previous_velocity);
-  double get_x_increment(double target_velocity);
+  std::vector<double> calculate_next_point(double x, double target_velocity,
+                                           double target_distance);
+
+  double get_target_distance();
+
   void anchors_add(double anchor_spacement, unsigned extra_anchors,
                    int target_lane);
 

@@ -21,11 +21,11 @@ double TrajectoryGenerator::calculate_velocity(
     double previous_velocity) {  // avs
 
   // std::cout << "PREVIOUS VELOCITY" << previous_velocity << '\n';
-  if (velocity < 49.5) {
-    velocity += MAX_ACCELERATION;
+  if (planned_velocity < 49.5) {
+    planned_velocity += MAX_ACCELERATION;
   }
 
-  return velocity;
+  return planned_velocity;
   // if (ego.speed <= TARGET_EGO_SPEED) {
   //  std::cout << "EGO_SPEED:" << ego.speed << previous_velocity << '\n';
   //
@@ -86,28 +86,36 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
 
   auto missing_points = path_length - trajectory.size();
 
-  auto x_increment = get_x_increment(target_velocity);
-
   double x{0}, y{0};
 
-  for (int i = 1; i <= missing_points; ++i) {
-    x = x + x_increment;
-    y = spline(x);
+  double target_distance = get_target_distance();
+
+  for (auto i = 0u; i < missing_points; ++i) {
+    auto v = calculate_next_point(x, target_velocity, target_distance);
+    x = v[0];
+    y = v[1];
 
     trajectory.x.push_back(x * cos(ref_yaw) - y * sin(ref_yaw) + ref_x);
     trajectory.y.push_back(x * sin(ref_yaw) + y * cos(ref_yaw) + ref_y);
   }
 }
 
-double TrajectoryGenerator::get_x_increment(double target_velocity) {
-  constexpr double time_per_point = .02;
-
-  double horizon_x = 30.0;
+double TrajectoryGenerator::get_target_distance() {
+  double horizon_x = HORIZON_DISTANCE;
   double horizon_y = spline(horizon_x);
   double target_distance =
       sqrt((horizon_x) * (horizon_x) + (horizon_y) * (horizon_y));
-  double N = target_distance / (time_per_point * target_velocity * MPH_2_MPS);
-  return horizon_x / N;
+
+  return target_distance;
+}
+
+std::vector<double> TrajectoryGenerator::calculate_next_point(
+    double x, double target_velocity, double target_distance) {
+  double N = target_distance / (TIME_PER_POINT * target_velocity * MPH_2_MPS);
+  x = x + HORIZON_DISTANCE / N;
+
+  double y = spline(x);
+  return {x, y};
 }
 
 void TrajectoryGenerator::anchors_init() {
