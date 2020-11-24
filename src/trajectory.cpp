@@ -8,7 +8,9 @@ Trajectory::Trajectory(const Trajectory& other)
       v(other.v),
       end_angle(other.end_angle),
       end_s(other.end_s),
-      end_d(other.end_d) {}
+      end_d(other.end_d),
+      intended_lane(other.intended_lane),
+      end_lane(other.end_lane) {}
 
 void Trajectory::update(const std::vector<double>& x_,
                         const std::vector<double>& y_, double end_s_,
