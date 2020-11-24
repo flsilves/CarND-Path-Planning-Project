@@ -9,7 +9,7 @@ static tk::spline spline;
 
 static double planned_velocity{0.0};
 
-TrajectoryGenerator::TrajectoryGenerator(Trajectory& previous_trajectory,
+TrajectoryGenerator::TrajectoryGenerator(const Trajectory& previous_trajectory,
                                          const VehicleState& ego,
                                          const MapWaypoints& map,
                                          const Prediction& predictions)
@@ -103,9 +103,10 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
     x = xy[0];
     y = xy[1];
 
+    std::cout << "VSIZE" << trajectory.v.size() << std::endl;
     trajectory.x.push_back(x * cos(ref_yaw) - y * sin(ref_yaw) + ref_x);
     trajectory.y.push_back(x * sin(ref_yaw) + y * cos(ref_yaw) + ref_y);
-    previous_trajectory.v.push_back(next_point_velocity);
+    trajectory.v.push_back(next_point_velocity);
   }
 }
 

@@ -5,6 +5,7 @@
 Trajectory::Trajectory(const Trajectory& other)
     : x(other.x),
       y(other.y),
+      v(other.v),
       end_angle(other.end_angle),
       end_s(other.end_s),
       end_d(other.end_d) {}

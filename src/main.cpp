@@ -65,7 +65,7 @@ int main() {
 
           planned_trajectory = motion_planning.get_trajectory();
 
-          // previous_trajectory.v = planned_trajectory.v;
+          previous_trajectory.v = planned_trajectory.v;
 
           print_info(ego, prev_ego, previous_trajectory, planned_trajectory,
                      prediction, motion_planning);
