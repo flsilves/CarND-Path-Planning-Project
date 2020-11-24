@@ -6,6 +6,8 @@ namespace {
 static tk::spline spline;
 }  // namespace
 
+static double planned_velocity{0.0};
+
 TrajectoryGenerator::TrajectoryGenerator(const Trajectory& previous_trajectory,
                                          const VehicleState& ego,
                                          const MapWaypoints& map,
@@ -17,18 +19,33 @@ TrajectoryGenerator::TrajectoryGenerator(const Trajectory& previous_trajectory,
 
 double TrajectoryGenerator::calculate_velocity(
     double previous_velocity) {  // avs
-  if (ego.speed <= TARGET_EGO_SPEED) {
-    return fmin(previous_velocity + MAX_ACCELERATION,
-                previous_velocity + (TARGET_EGO_SPEED - previous_velocity));
-  } else {
-    return TARGET_EGO_SPEED;
+
+  // std::cout << "PREVIOUS VELOCITY" << previous_velocity << '\n';
+  if (velocity < 49.5) {
+    velocity += MAX_ACCELERATION;
   }
+
+  return velocity;
+  // if (ego.speed <= TARGET_EGO_SPEED) {
+  //  std::cout << "EGO_SPEED:" << ego.speed << previous_velocity << '\n';
+  //
+  //  std::cout << "first:" << previous_velocity + MAX_ACCELERATION << '\n';
+  //
+  //  std::cout << "second:"
+  //            << previous_velocity + (TARGET_EGO_SPEED - previous_velocity)
+  //            << '\n';
+  //
+  //  return fmin(previous_velocity + MAX_ACCELERATION,
+  //              previous_velocity + (TARGET_EGO_SPEED - previous_velocity));
+  //} else {
+  //  return TARGET_EGO_SPEED;
+  //}
 }
 
 Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
                                                     unsigned intended_lane) {
   auto new_trajectory = previous_trajectory;
-  new_trajectory.trim(10);
+  // new_trajectory.trim(10);
 
   // if(end lane != current lane) -> trim
 
@@ -41,13 +58,15 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
   // if(prepare) // evaluate gap -> calculate velocity for maneuver
   // if(keep lane) // check for gap or cutting in vehicles
   // clang-format on
+  auto target_velocity = calculate_velocity(ego.speed);
 
-  auto target_velocity = calculate_velocity(previous_trajectory.end_velocity);
+  std::cout << "Target velocity" << target_velocity << std::endl;
 
   fill_trajectory_points(new_trajectory, target_velocity, end_lane);
   new_trajectory.calculate_end_frenet(map.x, map.y);
   new_trajectory.end_velocity = target_velocity;
 
+  std::cout << "FUCK" << new_trajectory.end_velocity << '\n';
   return new_trajectory;
 }
 
@@ -58,6 +77,7 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
   const unsigned extra_anchors = 2;
   const unsigned path_length = 50;
 
+  anchors_init();
   anchors_trim();
   anchors_add(anchor_spacement, extra_anchors, end_lane);
   anchors_recenter();

@@ -61,6 +61,9 @@ std::ostream& operator<<(std::ostream& os, const Trajectory& path) {
   os << "y[" << path.y.front() << " -> " << path.y.back() << "] ";
   os << "end_s[" << path.end_s << "] ";
   os << "end_d[" << path.end_d << "] ";
+  os << "end_velocity[" << path.end_velocity << "] ";
+  os << "intended_lane[" << path.intended_lane << "] ";
+  os << "end lane[" << path.end_lane << "] ";
   os << "size[" << path.size() << ']';
   return os;
 }
