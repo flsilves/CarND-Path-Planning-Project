@@ -67,9 +67,6 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
 
   fill_trajectory_points(new_trajectory, target_velocity, end_lane);
   new_trajectory.calculate_end_frenet(map.x, map.y);
-  new_trajectory.end_velocity = target_velocity;
-
-  std::cout << "FUCK" << new_trajectory.end_velocity << '\n';
   return new_trajectory;
 }
 
@@ -91,7 +88,7 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
 
   double x{0}, y{0};
 
-  double next_point_velocity = get_last_planned_velocity();
+  double next_point_velocity = trajectory.get_last_point_velocity();
 
   double target_distance = get_target_distance();
 
@@ -122,14 +119,6 @@ double TrajectoryGenerator::get_next_point_velocity(
     std::cout << "future_ego_speed" << last_planned_velocity << '\n';
   }
   return last_planned_velocity;
-}
-
-double TrajectoryGenerator::get_last_planned_velocity() {
-  if (previous_trajectory.v.empty()) {
-    return 0.;
-  } else {
-    return previous_trajectory.v.back();
-  }
 }
 
 double TrajectoryGenerator::get_target_distance() {

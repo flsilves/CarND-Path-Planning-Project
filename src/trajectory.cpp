@@ -58,6 +58,14 @@ void Trajectory::calculate_end_frenet(const std::vector<double>& map_x,
   }
 }
 
+double Trajectory::get_last_point_velocity() const {
+  if (v.empty()) {
+    return 0.;
+  } else {
+    return v.back();
+  }
+}
+
 void Trajectory::trim(std::size_t new_size) {
   if (new_size > x.size()) {
     x.resize(new_size);
@@ -74,7 +82,7 @@ std::ostream& operator<<(std::ostream& os, const Trajectory& path) {
   os << "y[" << path.y.front() << " -> " << path.y.back() << "] ";
   os << "end_s[" << path.end_s << "] ";
   os << "end_d[" << path.end_d << "] ";
-  os << "end_velocity[" << path.end_velocity << "] ";
+  os << "end_velocity[" << path.get_last_point_velocity() << "] ";
   os << "intended_lane[" << path.intended_lane << "] ";
   os << "end lane[" << path.end_lane << "] ";
   os << "size[" << path.size() << ']';

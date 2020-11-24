@@ -21,6 +21,8 @@ class Trajectory {
   void calculate_end_frenet(const std::vector<double>& map_x,
                             const std::vector<double>& map_y);
 
+  double get_last_point_velocity() const ;
+
   void trim(std::size_t new_size);
   void consume_velocity_points(unsigned n_points);
 
@@ -32,7 +34,6 @@ class Trajectory {
   std::deque<double> v{};
   double end_angle{0.0};
   double end_s{0.0}, end_d{0.0};
-  double end_velocity{0.0};
   unsigned intended_lane{1}, end_lane{1};
 };
 
