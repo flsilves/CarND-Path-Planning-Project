@@ -1,6 +1,7 @@
 #include "trajectory_generator.h"
 
 #include "helpers.h"
+#include "parameters.h"
 
 namespace {
 static tk::spline spline;
@@ -8,7 +9,7 @@ static tk::spline spline;
 
 static double planned_velocity{0.0};
 
-TrajectoryGenerator::TrajectoryGenerator(const Trajectory& previous_trajectory,
+TrajectoryGenerator::TrajectoryGenerator(Trajectory& previous_trajectory,
                                          const VehicleState& ego,
                                          const MapWaypoints& map,
                                          const Prediction& predictions)
@@ -58,9 +59,11 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
   // if(prepare) // evaluate gap -> calculate velocity for maneuver
   // if(keep lane) // check for gap or cutting in vehicles
   // clang-format on
-  auto target_velocity = calculate_velocity(ego.speed);
+  // auto target_velocity = calculate_velocity(ego.speed);
 
-  std::cout << "Target velocity" << target_velocity << std::endl;
+  double target_velocity = 49.5;
+
+  // std::cout << "Target velocity" << target_velocity << std::endl;
 
   fill_trajectory_points(new_trajectory, target_velocity, end_lane);
   new_trajectory.calculate_end_frenet(map.x, map.y);
@@ -84,19 +87,47 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
 
   spline.set_points(anchors_x, anchors_y);
 
-  auto missing_points = path_length - trajectory.size();
+  auto missing_points = PATH_LENGTH - trajectory.size();
 
   double x{0}, y{0};
+
+  double next_point_velocity = get_last_planned_velocity();
 
   double target_distance = get_target_distance();
 
   for (auto i = 0u; i < missing_points; ++i) {
-    auto v = calculate_next_point(x, target_velocity, target_distance);
-    x = v[0];
-    y = v[1];
+    next_point_velocity =
+        get_next_point_velocity(next_point_velocity, target_velocity);
+
+    auto xy = calculate_next_point(x, next_point_velocity, target_distance);
+    x = xy[0];
+    y = xy[1];
 
     trajectory.x.push_back(x * cos(ref_yaw) - y * sin(ref_yaw) + ref_x);
     trajectory.y.push_back(x * sin(ref_yaw) + y * cos(ref_yaw) + ref_y);
+    previous_trajectory.v.push_back(next_point_velocity);
+  }
+}
+
+double TrajectoryGenerator::get_next_point_velocity(
+    double last_planned_velocity, double target_velocity) {
+  if (last_planned_velocity < target_velocity) {
+    last_planned_velocity +=
+        fmin(MAX_ACCELERATION, target_velocity - last_planned_velocity);
+    std::cout << "future_ego_speed" << last_planned_velocity << '\n';
+  } else {
+    last_planned_velocity -=
+        fmin(MAX_ACCELERATION, last_planned_velocity - target_velocity);
+    std::cout << "future_ego_speed" << last_planned_velocity << '\n';
+  }
+  return last_planned_velocity;
+}
+
+double TrajectoryGenerator::get_last_planned_velocity() {
+  if (previous_trajectory.v.empty()) {
+    return 0.;
+  } else {
+    return previous_trajectory.v.back();
   }
 }
 
@@ -110,9 +141,9 @@ double TrajectoryGenerator::get_target_distance() {
 }
 
 std::vector<double> TrajectoryGenerator::calculate_next_point(
-    double x, double target_velocity, double target_distance) {
+    double starting_x, double target_velocity, double target_distance) {
   double N = target_distance / (TIME_PER_POINT * target_velocity * MPH_2_MPS);
-  x = x + HORIZON_DISTANCE / N;
+  double x = starting_x + HORIZON_DISTANCE / N;
 
   double y = spline(x);
   return {x, y};

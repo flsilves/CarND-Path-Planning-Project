@@ -21,6 +21,16 @@ void Trajectory::update(const std::vector<double>& x_,
     throw std::runtime_error(
         "Trajectory::update(): x and y have different lengths");
   }
+  std::cout << "DEQUE SIZE" << v.size() << std::endl;
+  if (not v.empty()) {
+    consume_velocity_points(PATH_LENGTH - x.size());
+  }
+}
+
+void Trajectory::consume_velocity_points(unsigned n_points) {
+  for (auto i = 0u; i < n_points; ++i) {
+    v.pop_front();
+  }
 }
 
 double Trajectory::calculate_end_angle() {

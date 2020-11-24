@@ -27,15 +27,17 @@ int main() {
 
   VehicleState ego{};
   Trajectory previous_trajectory{};
+  Trajectory planned_trajectory{};
   MapWaypoints map(MAP_FILEPATH, MAP_MAX_S);
   Prediction prediction{map};
   TrajectoryGenerator trajectory_generator{previous_trajectory, ego, map,
                                            prediction};
   Planner motion_planning{ego, trajectory_generator, prediction, map};
 
-  h.onMessage([&ego, &previous_trajectory, &map, &prediction, &motion_planning](
-                  uWS::WebSocket<uWS::SERVER> ws, char* data,
-                  std::size_t length, uWS::OpCode opCode) {
+  h.onMessage([&ego, &previous_trajectory, &planned_trajectory, &map,
+               &prediction, &motion_planning](uWS::WebSocket<uWS::SERVER> ws,
+                                              char* data, std::size_t length,
+                                              uWS::OpCode opCode) {
     if (valid_socket_message(length, data)) {
       auto s = hasData(data);
 
@@ -61,7 +63,9 @@ int main() {
               ego, previous_trajectory.end_s,
               50 * 0.02);  // TODO PREDICT INTO COMPLETE SIZE OF PATH
 
-          auto planned_trajectory = motion_planning.get_trajectory();
+          planned_trajectory = motion_planning.get_trajectory();
+
+          // previous_trajectory.v = planned_trajectory.v;
 
           print_info(ego, prev_ego, previous_trajectory, planned_trajectory,
                      prediction, motion_planning);

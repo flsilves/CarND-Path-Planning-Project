@@ -10,9 +10,8 @@
 #include "vehicle.h"
 class TrajectoryGenerator {
  public:
-  TrajectoryGenerator(const Trajectory& previous_trajectory,
-                      const VehicleState& ego, const MapWaypoints& map,
-                      const Prediction& predictions);
+  TrajectoryGenerator(Trajectory& previous_trajectory, const VehicleState& ego,
+                      const MapWaypoints& map, const Prediction& predictions);
 
   Trajectory generate_trajectory(unsigned end_lane, unsigned intended_lane);
 
@@ -20,11 +19,16 @@ class TrajectoryGenerator {
 
  private:
   double calculate_velocity(double previous_velocity);
-  std::vector<double> calculate_next_point(double x, double target_velocity,
+  std::vector<double> calculate_next_point(double starting_x,
+                                           double target_velocity,
                                            double target_distance);
+
+  double get_next_point_velocity(double last_planned_velocity,
+                                 double target_velocity);
 
   double get_target_distance();
 
+  double get_last_planned_velocity();
   void anchors_add(double anchor_spacement, unsigned extra_anchors,
                    int target_lane);
 
@@ -37,7 +41,7 @@ class TrajectoryGenerator {
  public:
   std::vector<double> anchors_x, anchors_y;
   double ref_yaw, ref_x, ref_y;
-  const Trajectory& previous_trajectory;
+  Trajectory& previous_trajectory;
   const VehicleState& ego;
   const MapWaypoints map;
   const Prediction& predictions;
