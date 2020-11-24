@@ -46,6 +46,13 @@ double TrajectoryGenerator::calculate_velocity(
 Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
                                                     unsigned intended_lane) {
   auto new_trajectory = previous_trajectory;
+
+  bool lane_change = (end_lane != intended_lane);
+
+  if (lane_change) {
+    new_trajectory.trim(10);
+  }
+
   // new_trajectory.trim(10);
 
   // if(end lane != current lane) -> trim
@@ -64,7 +71,6 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
   double target_velocity = 49.5;
 
   // std::cout << "Target velocity" << target_velocity << std::endl;
-
   fill_trajectory_points(new_trajectory, target_velocity, end_lane);
   new_trajectory.calculate_end_frenet(map.x, map.y);
   return new_trajectory;
@@ -73,11 +79,10 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
 void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
                                                  double target_velocity,
                                                  unsigned end_lane) {
-  const double anchor_spacement = 50.0;
-  const unsigned extra_anchors = 2;
-  const unsigned path_length = 50;
+  // Hyper-parameters
+  const double anchor_spacement{50.0};
+  const unsigned extra_anchors{2};
 
-  anchors_init();
   anchors_trim();
   anchors_add(anchor_spacement, extra_anchors, end_lane);
   anchors_recenter();
@@ -100,7 +105,7 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
     x = xy[0];
     y = xy[1];
 
-    std::cout << "VSIZE" << trajectory.v.size() << std::endl;
+    // std::cout << "VSIZE" << trajectory.v.size() << std::endl;
     trajectory.x.push_back(x * cos(ref_yaw) - y * sin(ref_yaw) + ref_x);
     trajectory.y.push_back(x * sin(ref_yaw) + y * cos(ref_yaw) + ref_y);
     trajectory.v.push_back(next_point_velocity);
@@ -112,11 +117,11 @@ double TrajectoryGenerator::get_next_point_velocity(
   if (last_planned_velocity < target_velocity) {
     last_planned_velocity +=
         fmin(MAX_ACCELERATION, target_velocity - last_planned_velocity);
-    std::cout << "future_ego_speed" << last_planned_velocity << '\n';
-  } else {
+    std::cout << "future_ego_speed" << last_planned_velocity << std::endl;
+  } else if (last_planned_velocity > target_velocity) {
     last_planned_velocity -=
         fmin(MAX_ACCELERATION, last_planned_velocity - target_velocity);
-    std::cout << "future_ego_speed" << last_planned_velocity << '\n';
+    std::cout << "future_ego_speed" << last_planned_velocity << std::endl;
   }
   return last_planned_velocity;
 }

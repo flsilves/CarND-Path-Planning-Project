@@ -65,8 +65,6 @@ int main() {
 
           planned_trajectory = motion_planning.get_trajectory();
 
-          if (PATH_LENGTH - x.size()) {
-          }
           previous_trajectory.v = planned_trajectory.v;
 
           print_info(ego, prev_ego, previous_trajectory, planned_trajectory,
