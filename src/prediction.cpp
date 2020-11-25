@@ -1,7 +1,10 @@
 
 #include "prediction.h"
 
-Prediction::Prediction(const MapWaypoints& map) : map(map){};
+#include "vehicle.h"
+
+Prediction::Prediction(const MapWaypoints& map, const VehicleState& ego)
+    : map(map), ego(ego){};
 
 void Prediction::update(nlohmann::json sensor_fusion) {
   for (auto& object_entry : sensor_fusion) {
@@ -40,6 +43,8 @@ void Prediction::update(nlohmann::json sensor_fusion) {
     }
   }
 }
+
+// VehicleState Prediction::get_front_vehicle()
 
 double Prediction::vehicle_close_ahead(int steps_into_future,
                                        double ego_future_s, int ego_lane,

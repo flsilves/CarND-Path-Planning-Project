@@ -7,8 +7,6 @@ namespace {
 static tk::spline spline;
 }  // namespace
 
-static double planned_velocity{0.0};
-
 TrajectoryGenerator::TrajectoryGenerator(const Trajectory& previous_trajectory,
                                          const VehicleState& ego,
                                          const MapWaypoints& map,
@@ -18,40 +16,42 @@ TrajectoryGenerator::TrajectoryGenerator(const Trajectory& previous_trajectory,
       map(map),
       predictions(predictions) {}
 
-double TrajectoryGenerator::calculate_velocity(
-    double previous_velocity) {  // avs
+double TrajectoryGenerator::get_keep_lane_velocity() {  // avs
 
-  // std::cout << "PREVIOUS VELOCITY" << previous_velocity << '\n';
-  if (planned_velocity < 49.5) {
-    planned_velocity += MAX_ACCELERATION;
+  double planned_velocity = 49.5;
+
+  double front_speed = predictions.vehicle_close_ahead(
+      previous_trajectory.size(), previous_trajectory.end_s, ego.get_lane(),
+      ego.s);
+
+  std::cout << "front speed" << front_speed << std::endl;
+
+  if (front_speed < planned_velocity) {
+    planned_velocity = front_speed;
   }
 
   return planned_velocity;
-  // if (ego.speed <= TARGET_EGO_SPEED) {
-  //  std::cout << "EGO_SPEED:" << ego.speed << previous_velocity << '\n';
-  //
-  //  std::cout << "first:" << previous_velocity + MAX_ACCELERATION << '\n';
-  //
-  //  std::cout << "second:"
-  //            << previous_velocity + (TARGET_EGO_SPEED - previous_velocity)
-  //            << '\n';
-  //
-  //  return fmin(previous_velocity + MAX_ACCELERATION,
-  //              previous_velocity + (TARGET_EGO_SPEED - previous_velocity));
-  //} else {
-  //  return TARGET_EGO_SPEED;
-  //}
 }
 
 Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
                                                     unsigned intended_lane) {
   auto new_trajectory = previous_trajectory;
 
-  bool lane_change = (end_lane != intended_lane);
-
-  if (lane_change) {
-    new_trajectory.trim(10);
+  double target_velocity;
+  if (ego.get_lane() == end_lane) {
+    target_velocity = get_keep_lane_velocity();
   }
+
+  // if (end_lane != intended_lane) {
+  //  target_velocity = fmin(get_prepare_lane_change_velocity(),
+  //  target_velocity);
+  //} else {
+  //  target_velocity = fmin(get_change_lane_velocity(), target_velocity);
+  //}
+  //
+  // if (lane_change) {
+  //  new_trajectory.trim(10);
+  //}
 
   // new_trajectory.trim(10);
 
@@ -67,8 +67,6 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
   // if(keep lane) // check for gap or cutting in vehicles
   // clang-format on
   // auto target_velocity = calculate_velocity(ego.speed);
-
-  double target_velocity = 49.5;
 
   // std::cout << "Target velocity" << target_velocity << std::endl;
   fill_trajectory_points(new_trajectory, target_velocity, end_lane);
@@ -90,11 +88,10 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
   spline.set_points(anchors_x, anchors_y);
 
   auto missing_points = PATH_LENGTH - trajectory.size();
+  std::cout << "Missing points" << missing_points << std::endl;
 
   double x{0}, y{0};
-
   double next_point_velocity = trajectory.get_last_point_velocity();
-
   double target_distance = get_target_distance();
 
   for (auto i = 0u; i < missing_points; ++i) {
@@ -105,7 +102,6 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
     x = xy[0];
     y = xy[1];
 
-    // std::cout << "VSIZE" << trajectory.v.size() << std::endl;
     trajectory.x.push_back(x * cos(ref_yaw) - y * sin(ref_yaw) + ref_x);
     trajectory.y.push_back(x * sin(ref_yaw) + y * cos(ref_yaw) + ref_y);
     trajectory.v.push_back(next_point_velocity);
@@ -114,6 +110,10 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
 
 double TrajectoryGenerator::get_next_point_velocity(
     double last_planned_velocity, double target_velocity) {
+  std::cout << "Target" << target_velocity << std::endl;
+
+  std::cout << "last_planned_velocity" << last_planned_velocity << std::endl;
+
   if (last_planned_velocity < target_velocity) {
     last_planned_velocity +=
         fmin(MAX_ACCELERATION, target_velocity - last_planned_velocity);

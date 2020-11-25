@@ -27,7 +27,7 @@ class TrajectoryGenerator {
                                  double target_velocity);
 
   double get_target_distance();
-
+  double get_keep_lane_velocity();
   double get_last_planned_velocity();
   void anchors_add(double anchor_spacement, unsigned extra_anchors,
                    int target_lane);

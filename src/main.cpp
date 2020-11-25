@@ -29,7 +29,7 @@ int main() {
   Trajectory previous_trajectory{};
   Trajectory planned_trajectory{};
   MapWaypoints map(MAP_FILEPATH, MAP_MAX_S);
-  Prediction prediction{map};
+  Prediction prediction(map, ego);
   TrajectoryGenerator trajectory_generator{previous_trajectory, ego, map,
                                            prediction};
   Planner motion_planning{ego, trajectory_generator, prediction, map};
