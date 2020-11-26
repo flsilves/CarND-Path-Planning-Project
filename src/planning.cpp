@@ -42,21 +42,22 @@ Trajectory Planner::get_trajectory() {
   vector<float> costs;
   vector<Trajectory> final_trajectories;
 
-  return plan_trajectory("KL");
+  // return plan_trajectory("KL");
 
-  // for (auto& candidate_state : states) {
-  //  auto trajectory = plan_trajectory(state);
-  //  if (trajectory.size() != 0) {
-  //    // costs.push_back(calculate_cost(trajectory));
-  //    costs.push_back(10.0);
-  //    final_trajectories.push_back(trajectory);
-  //  }
-  //}
-  //
-  // auto it_best_cost = min_element(begin(costs), end(costs));
-  // unsigned best_idx = distance(begin(costs), it_best_cost);
-  //
-  // return final_trajectories[best_idx];
+  for (auto& candidate_state : states) {
+    std::cout << "\n\nplanning:" << candidate_state << std::endl;
+    auto trajectory = plan_trajectory(candidate_state);
+    if (trajectory.size() != 0) {
+      // costs.push_back(calculate_cost(trajectory));
+      costs.push_back(10.0);
+      final_trajectories.push_back(trajectory);
+    }
+  }
+
+  auto it_best_cost = min_element(begin(costs), end(costs));
+  unsigned best_idx = distance(begin(costs), it_best_cost);
+
+  return final_trajectories[best_idx];
 }
 
 Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
@@ -67,11 +68,21 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
   current_lane = ego.get_lane();
   intended_lane = current_lane + lane_direction[candidate_state];
 
-  if (state.compare("KL") == 0 || state.compare("PLCL") == 0 ||
-      state.compare("PLCR") == 0) {
+  if (candidate_state.compare("KL") == 0 ||
+      candidate_state.compare("PLCL") == 0 ||
+      candidate_state.compare("PLCR") == 0) {
     end_lane = current_lane;
-  } else if (state.compare("LCL") == 0 || state.compare("LCR") == 0) {
+    std::cout << "state1" << candidate_state << std::endl;
+    std::cout << "intendend" << intended_lane << std::endl;
+    std::cout << "end" << end_lane << std::endl;
+
+  } else if (candidate_state.compare("LCL") == 0 ||
+             candidate_state.compare("LCR") == 0) {
     end_lane = intended_lane;
+    std::cout << "state2" << candidate_state << std::endl;
+    std::cout << "intendend" << intended_lane << std::endl;
+
+    std::cout << "end" << end_lane << std::endl;
   }
 
   trajectory_generator.anchors_init();

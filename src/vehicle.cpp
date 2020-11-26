@@ -33,7 +33,7 @@ bool VehicleState::left_lane_exists() const { return d > 4.0; }
 
 bool VehicleState::right_lane_exists() const { return d < 12.0; }
 
-bool VehicleState::is_traffic_vehicle() const { return id != 42; }
+bool VehicleState::is_valid() const { return id != 42; }
 
 bool VehicleState::evaluate_continuity(VehicleState next) {
   return (abs(next.speed - speed) < 3.0) && (abs(next.x - x) < 5.0) &&
