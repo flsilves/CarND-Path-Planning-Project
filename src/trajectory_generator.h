@@ -10,10 +10,11 @@
 #include "vehicle.h"
 class TrajectoryGenerator {
  public:
-  TrajectoryGenerator(const Trajectory& previous_trajectory, const VehicleState& ego,
-                      const MapWaypoints& map, const Prediction& predictions);
+  TrajectoryGenerator(const Trajectory& previous_trajectory,
+                      const VehicleState& ego, const MapWaypoints& map,
+                      const Prediction& predictions);
 
-  Trajectory generate_trajectory(unsigned end_lane, unsigned intended_lane);
+  Trajectory generate_trajectory(unsigned intended_lane, unsigned end_lane);
 
   void anchors_init();
 
@@ -29,6 +30,11 @@ class TrajectoryGenerator {
   double get_target_distance();
   double get_keep_lane_velocity(Trajectory& new_trajectory);
   double get_last_planned_velocity();
+
+  double prepare_lane_change_velocity(Trajectory& new_trajectory);
+
+  double lane_change_velocity(Trajectory& new_trajectory);
+
   void anchors_add(double anchor_spacement, unsigned extra_anchors,
                    int target_lane);
 

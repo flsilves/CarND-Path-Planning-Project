@@ -25,8 +25,8 @@ double TrajectoryGenerator::get_keep_lane_velocity(Trajectory& new_trajectory) {
   double current_lane_speed = predictions.lane_speeds[ego_lane];
 
   if (predicted_front_gap < 0) {
-    std::cout << "NEGATIVE GAP" << std::endl;
-    planned_velocity = current_lane_speed - 10.0;
+    // std::cout << "NEGATIVE GAP" << std::endl;
+    planned_velocity = current_lane_speed - 10.0;  // EMERGENCY_BRAKE
     new_trajectory.trim(5);
   } else if ((predicted_front_gap / ego.speed) < KEEP_DISTANCE_TIME) {
     planned_velocity = predicted_front_gap / KEEP_DISTANCE_TIME;
@@ -34,43 +34,35 @@ double TrajectoryGenerator::get_keep_lane_velocity(Trajectory& new_trajectory) {
   return planned_velocity;
 }
 
-Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
-                                                    unsigned intended_lane) {
+double TrajectoryGenerator::prepare_lane_change_velocity(
+    Trajectory& new_trajectory) {
+  double planned_velocity = 49.5;
+  return planned_velocity;
+}
+
+double TrajectoryGenerator::lane_change_velocity(Trajectory& new_trajectory) {
+  double planned_velocity = 49.5;
+  return planned_velocity;
+}
+
+Trajectory TrajectoryGenerator::generate_trajectory(unsigned intended_lane,
+                                                    unsigned end_lane) {
   auto new_trajectory = previous_trajectory;
 
-  double target_velocity;
+  double planned_velocity;
+
   if (ego.get_lane() == end_lane) {
-    target_velocity = get_keep_lane_velocity(new_trajectory);
+    planned_velocity = get_keep_lane_velocity(new_trajectory);
+
+    if (end_lane != intended_lane) {
+      planned_velocity =
+          fmin(planned_velocity, prepare_lane_change_velocity(new_trajectory));
+    }
+  } else {
+    planned_velocity = lane_change_velocity(new_trajectory);
   }
 
-  // if (end_lane != intended_lane) {
-  //  target_velocity = fmin(get_prepare_lane_change_velocity(),
-  //  target_velocity);
-  //} else {
-  //  target_velocity = fmin(get_change_lane_velocity(), target_velocity);
-  //}
-  //
-  // if (lane_change) {
-  //  new_trajectory.trim(10);
-  //}
-
-  // new_trajectory.trim(10);
-
-  // if(end lane != current lane) -> trim
-
-  // predict where front and rear car are going to be at 50
-
-  // calculate velocity for safe distance
-
-  // clang-format off
-  // if(lane_change) // trim current path -> validate at the end for collisions -> return empty if not valid
-  // if(prepare) // evaluate gap -> calculate velocity for maneuver
-  // if(keep lane) // check for gap or cutting in vehicles
-  // clang-format on
-  // auto target_velocity = calculate_velocity(ego.speed);
-
-  // std::cout << "Target velocity" << target_velocity << std::endl;
-  fill_trajectory_points(new_trajectory, target_velocity, end_lane);
+  fill_trajectory_points(new_trajectory, planned_velocity, end_lane);
   new_trajectory.calculate_end_frenet(map.x, map.y);
   return new_trajectory;
 }

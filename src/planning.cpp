@@ -6,7 +6,7 @@ using std::string;
 using std::vector;
 namespace {
 static std::map<string, int> lane_direction = {
-    {"PLCL", -1}, {"LCL", -1}, {"LCR", 1}, {"PLCR", 1}};
+    {"KL", 0}, {"PLCL", -1}, {"LCL", -1}, {"LCR", 1}, {"PLCR", 1}};
 }  // namespace
 
 Planner::Planner(const VehicleState& ego, TrajectoryGenerator& gen,
@@ -63,21 +63,21 @@ Trajectory Planner::get_trajectory() {
 Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
   Trajectory trajectory;
 
-  trajectory_generator.anchors_init();
+  unsigned current_lane, intended_lane, end_lane;
 
-  unsigned intended_lane = ego.get_lane() + lane_direction[candidate_state];
+  current_lane = ego.get_lane();
+  intended_lane = current_lane + lane_direction[candidate_state];
 
-  if (state.compare("KL") == 0) {
-    trajectory =
-        trajectory_generator.generate_trajectory(intended_lane, ego.get_lane());
+  if (state.compare("KL") == 0 || state.compare("PLCL") == 0 ||
+      state.compare("PLCR") == 0) {
+    end_lane = current_lane;
   } else if (state.compare("LCL") == 0 || state.compare("LCR") == 0) {
-    trajectory =
-        trajectory_generator.generate_trajectory(intended_lane, ego.get_lane());
-  } else if (state.compare("PLCL") == 0 || state.compare("PLCR") == 0) {
-    trajectory =
-        trajectory_generator.generate_trajectory(intended_lane, ego.get_lane());
+    end_lane = intended_lane;
   }
 
+  trajectory_generator.anchors_init();
+  trajectory =
+      trajectory_generator.generate_trajectory(intended_lane, end_lane);
   return trajectory;
 }
 
