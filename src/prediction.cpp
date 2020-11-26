@@ -133,8 +133,12 @@ void Prediction::predict_gaps(VehicleState ego, double future_ego_s,
       }
     } else {
       if (delta_s < lane_gap.distance_behind) {
+        std::cout << "HERE!!!!!!!!!!!!!!!!!!!11" << std::endl;
         lane_gap.distance_behind = delta_s;
+        std::cout << "delta_s:" << delta_s << std::endl;
+
         lane_gap.vehicle_behind = future_traffic_vehicle;
+        std::cout << lane_gap.vehicle_behind << std::endl;
       }
     }
 

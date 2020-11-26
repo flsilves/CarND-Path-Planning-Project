@@ -81,15 +81,20 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned intended_lane,
 }
 
 bool TrajectoryGenerator::validate_trajectory(Trajectory& trajectory) {
+  // std::cout << "DEBUG" << predictions << std::endl;
   auto predicted_gaps = predictions.predicted_gaps[trajectory.end_lane];
+
+  // std::cout << "Traj end lane " << trajectory.end_lane << std::endl;
 
   auto vehicle_ahead = predicted_gaps.vehicle_ahead;
   auto vehicle_behind = predicted_gaps.vehicle_behind;
 
   bool validate_front{true}, validate_rear{true};
 
-  std::cout << "VEhicle ahead" << vehicle_ahead << std::endl;
-  std::cout << "VEhicle vehicle_behind" << vehicle_behind << std::endl;
+  // std::cout << "VEhicle ahead" << vehicle_ahead << std::endl;
+  // std::cout << "VEhicle vehicle_behind" << vehicle_behind << std::endl;
+  // std::cout << "VEhicle distance behind" << predicted_gaps.distance_behind
+  // << std::endl;
 
   if (vehicle_ahead.is_valid()) {
     double gap_front = distance(vehicle_ahead.x, vehicle_ahead.y,

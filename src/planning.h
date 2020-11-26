@@ -23,6 +23,8 @@ class Planner {
   Planner step();
 
   Trajectory get_trajectory();
+  double cost_inneficient_lane(const Trajectory& trajectory);
+  double calculate_cost(const Trajectory& trajectory);
 
   Trajectory plan_trajectory(const std::string& candidate_state);
 

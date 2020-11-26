@@ -37,10 +37,34 @@ vector<string> Planner::successor_states() {
   return states;
 }
 
+double Planner::calculate_cost(const Trajectory& trajectory) {
+  const auto INNEFICIENCY_WEIGHT = 10.0;
+  double cost{0.0};
+
+  cost += INNEFICIENCY_WEIGHT * cost_inneficient_lane(trajectory);
+
+  return cost;
+}
+
+double Planner::cost_inneficient_lane(const Trajectory& trajectory) {
+  double intended_lane_speed =
+      predictions.lane_speeds[trajectory.intended_lane];
+  double end_lane_speed = predictions.lane_speeds[trajectory.end_lane];
+  double current_speed = ego.speed;
+
+  std::cout << "end_lane_speed" << end_lane_speed << std::endl;
+  std::cout << "intended_lane_speed" << intended_lane_speed << std::endl;
+  std::cout << "current_speed" << current_speed << std::endl;
+
+  double cost = 2.0 - (intended_lane_speed + end_lane_speed) / current_speed;
+  cost = fmax(0.0, cost);
+  return cost;
+}
+
 Trajectory Planner::get_trajectory() {
   vector<string> states = successor_states();
   vector<float> costs;
-  vector<Trajectory> final_trajectories;
+  vector<Trajectory> final_trajectories;  // TODO replace with a map
 
   // return plan_trajectory("KL");
 
@@ -48,8 +72,10 @@ Trajectory Planner::get_trajectory() {
     std::cout << "\n\nplanning:" << candidate_state << std::endl;
     auto trajectory = plan_trajectory(candidate_state);
     if (trajectory.size() != 0) {
-      // costs.push_back(calculate_cost(trajectory));
-      costs.push_back(10.0);
+      double cost = calculate_cost(trajectory);
+      std::cout << "cost:" << cost << std::endl;
+      costs.push_back(cost);
+      // costs.push_back(10.0);
       final_trajectories.push_back(trajectory);
     }
   }
@@ -72,17 +98,17 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
       candidate_state.compare("PLCL") == 0 ||
       candidate_state.compare("PLCR") == 0) {
     end_lane = current_lane;
-    std::cout << "state1" << candidate_state << std::endl;
-    std::cout << "intendend" << intended_lane << std::endl;
-    std::cout << "end" << end_lane << std::endl;
+    // std::cout << "state1" << candidate_state << std::endl;
+    // std::cout << "intendend" << intended_lane << std::endl;
+    // std::cout << "end" << end_lane << std::endl;
 
   } else if (candidate_state.compare("LCL") == 0 ||
              candidate_state.compare("LCR") == 0) {
     end_lane = intended_lane;
-    std::cout << "state2" << candidate_state << std::endl;
-    std::cout << "intendend" << intended_lane << std::endl;
+    // std::cout << "state2" << candidate_state << std::endl;
+    // std::cout << "intendend" << intended_lane << std::endl;
 
-    std::cout << "end" << end_lane << std::endl;
+    // std::cout << "end" << end_lane << std::endl;
   }
 
   trajectory_generator.anchors_init();
