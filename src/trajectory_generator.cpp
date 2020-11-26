@@ -35,9 +35,11 @@ double TrajectoryGenerator::get_keep_lane_velocity(Trajectory& new_trajectory) {
 }
 
 double TrajectoryGenerator::prepare_lane_change_velocity(
-    Trajectory& new_trajectory) {
-  double planned_velocity = 49.5;
-  return planned_velocity;
+    Trajectory& new_trajectory, unsigned intended_lane) {
+  // double predicted_gaps =  predictions.predicted_gaps[intended_lane];
+  double intended_lane_speed = predictions.lane_speeds[intended_lane];
+
+  return intended_lane_speed;
 }
 
 double TrajectoryGenerator::lane_change_velocity(Trajectory& new_trajectory) {
@@ -56,15 +58,48 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned intended_lane,
 
     if (end_lane != intended_lane) {
       planned_velocity =
-          fmin(planned_velocity, prepare_lane_change_velocity(new_trajectory));
+          fmin(planned_velocity,
+               prepare_lane_change_velocity(new_trajectory, intended_lane));
     }
   } else {
-    planned_velocity = lane_change_velocity(new_trajectory);
+    new_trajectory.trim(10);
+    planned_velocity =
+        prepare_lane_change_velocity(new_trajectory, intended_lane);
   }
 
   fill_trajectory_points(new_trajectory, planned_velocity, end_lane);
   new_trajectory.calculate_end_frenet(map.x, map.y);
-  return new_trajectory;
+
+  if (validate_trajectory(new_trajectory)) {
+    return new_trajectory;
+  } else {
+    return {};
+  }
+}
+
+bool TrajectoryGenerator::validate_trajectory(Trajectory& trajectory) {
+  auto predicted_gaps = predictions.predicted_gaps[trajectory.end_lane];
+
+  auto vehicle_ahead = predicted_gaps.vehicle_ahead;
+  auto vehicle_behind = predicted_gaps.vehicle_behind;
+
+  bool validate_front, validate_rear;
+
+  if (vehicle_ahead.is_traffic_vehicle()) {
+    double gap_s = vehicle_ahead.s - trajectory.end_s;
+    validate_front = gap_s < 30.0;
+  }
+
+  if (vehicle_behind.is_traffic_vehicle()) {
+    double gap_s = trajectory.end_s - vehicle_behind.s;
+    bool too_close_to_rear_vehicle = gap_s < 20.0;
+    bool too_slow_relative_to_rear_vehicle =
+        (trajectory.v.back() < vehicle_behind.speed);
+    validate_rear =
+        not too_close_to_rear_vehicle && not too_slow_relative_to_rear_vehicle;
+  }
+
+  return (validate_rear && validate_front);
 }
 
 void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,

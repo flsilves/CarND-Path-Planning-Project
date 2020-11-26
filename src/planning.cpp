@@ -42,22 +42,19 @@ Trajectory Planner::get_trajectory() {
   vector<float> costs;
   vector<Trajectory> final_trajectories;
 
-  return plan_trajectory("KL");
-  //
-  //
-  //  //for (auto& candidate_state : states) {
-  //  //  auto trajectory = plan_trajectory("KL");
-  //  //  if (trajectory.size() != 0) {
-  //  //    // costs.push_back(calculate_cost(trajectory));
-  //  //    costs.push_back(10.0);
-  //  //    final_trajectories.push_back(trajectory);
-  //  //  }
-  //  //}
-  //
-  //  //auto it_best_const = min_element(begin(costs), end(costs));
-  //  //unsigned best_idx = distance(begin(costs), it_best_const);
-  //
-  // return final_trajectories[best_idx];
+  for (auto& candidate_state : states) {
+    auto trajectory = plan_trajectory("KL");
+    if (trajectory.size() != 0) {
+      // costs.push_back(calculate_cost(trajectory));
+      // costs.push_back(10.0);
+      final_trajectories.push_back(trajectory);
+    }
+  }
+
+  auto it_best_cost = min_element(begin(costs), end(costs));
+  unsigned best_idx = distance(begin(costs), it_best_cost);
+
+  return final_trajectories[best_idx];
 }
 
 Trajectory Planner::plan_trajectory(const std::string& candidate_state) {

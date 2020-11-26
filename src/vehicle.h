@@ -24,6 +24,8 @@ class VehicleState {
   bool left_lane_exists() const;
   bool right_lane_exists() const;
 
+  bool is_traffic_vehicle() const;
+
   void update(double x, double y, double s, double d, double yaw, double speed);
 
   int get_lane(double lane_width = 4.0) const;

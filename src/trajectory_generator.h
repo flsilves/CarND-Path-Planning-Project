@@ -31,7 +31,8 @@ class TrajectoryGenerator {
   double get_keep_lane_velocity(Trajectory& new_trajectory);
   double get_last_planned_velocity();
 
-  double prepare_lane_change_velocity(Trajectory& new_trajectory);
+  double prepare_lane_change_velocity(Trajectory& new_trajectory,
+                                      unsigned intented_lane);
 
   double lane_change_velocity(Trajectory& new_trajectory);
 
@@ -40,6 +41,7 @@ class TrajectoryGenerator {
 
   void anchors_recenter();
   void anchors_trim();
+  bool validate_trajectory(Trajectory& trajectory);
 
   void fill_trajectory_points(Trajectory& trajectory, double target_velocity,
                               unsigned end_lane);

@@ -13,6 +13,8 @@
 struct Gap {
   double distance_behind;
   double distance_ahead;
+  VehicleState vehicle_ahead;
+  VehicleState vehicle_behind;
 };
 
 class Prediction {
