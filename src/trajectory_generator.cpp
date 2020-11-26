@@ -36,10 +36,7 @@ double TrajectoryGenerator::get_keep_lane_velocity(Trajectory& new_trajectory) {
 
 double TrajectoryGenerator::prepare_lane_change_velocity(
     Trajectory& new_trajectory, unsigned intended_lane) {
-  // double predicted_gaps =  predictions.predicted_gaps[intended_lane];
-  double intended_lane_speed = predictions.lane_speeds[intended_lane];
-
-  return intended_lane_speed;
+  return predictions.lane_speeds[intended_lane];
 }
 
 double TrajectoryGenerator::lane_change_velocity(Trajectory& new_trajectory) {
@@ -70,11 +67,11 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned intended_lane,
   fill_trajectory_points(new_trajectory, planned_velocity, end_lane);
   new_trajectory.calculate_end_frenet(map.x, map.y);
 
-  if (validate_trajectory(new_trajectory)) {
-    return new_trajectory;
-  } else {
-    return {};
-  }
+  // if (validate_trajectory(new_trajectory)) {
+  return new_trajectory;
+  //} else {
+  //  return {};
+  // }
 }
 
 bool TrajectoryGenerator::validate_trajectory(Trajectory& trajectory) {
@@ -138,18 +135,18 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
 
 double TrajectoryGenerator::get_next_point_velocity(
     double last_planned_velocity, double target_velocity) {
-  std::cout << "Target" << target_velocity << std::endl;
+  // std::cout << "Target" << target_velocity << std::endl;
 
-  std::cout << "last_planned_velocity" << last_planned_velocity << std::endl;
+  // std::cout << "last_planned_velocity" << last_planned_velocity << std::endl;
 
   if (last_planned_velocity < target_velocity) {
     last_planned_velocity +=
         fmin(MAX_ACCELERATION, target_velocity - last_planned_velocity);
-    std::cout << "future_ego_speed" << last_planned_velocity << std::endl;
+    // std::cout << "future_ego_speed" << last_planned_velocity << std::endl;
   } else if (last_planned_velocity > target_velocity) {
     last_planned_velocity -=
         fmin(MAX_ACCELERATION, last_planned_velocity - target_velocity);
-    std::cout << "future_ego_speed" << last_planned_velocity << std::endl;
+    // std::cout << "future_ego_speed" << last_planned_velocity << std::endl;
   }
   return last_planned_velocity;
 }

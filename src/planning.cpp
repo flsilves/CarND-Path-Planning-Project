@@ -42,19 +42,21 @@ Trajectory Planner::get_trajectory() {
   vector<float> costs;
   vector<Trajectory> final_trajectories;
 
-  for (auto& candidate_state : states) {
-    auto trajectory = plan_trajectory("KL");
-    if (trajectory.size() != 0) {
-      // costs.push_back(calculate_cost(trajectory));
-      // costs.push_back(10.0);
-      final_trajectories.push_back(trajectory);
-    }
-  }
+  return plan_trajectory("KL");
 
-  auto it_best_cost = min_element(begin(costs), end(costs));
-  unsigned best_idx = distance(begin(costs), it_best_cost);
-
-  return final_trajectories[best_idx];
+  // for (auto& candidate_state : states) {
+  //  auto trajectory = plan_trajectory(state);
+  //  if (trajectory.size() != 0) {
+  //    // costs.push_back(calculate_cost(trajectory));
+  //    costs.push_back(10.0);
+  //    final_trajectories.push_back(trajectory);
+  //  }
+  //}
+  //
+  // auto it_best_cost = min_element(begin(costs), end(costs));
+  // unsigned best_idx = distance(begin(costs), it_best_cost);
+  //
+  // return final_trajectories[best_idx];
 }
 
 Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
@@ -122,3 +124,55 @@ std::ostream& operator<<(std::ostream& os, const Planner& planner) {
   }
   return trajectory_generator.generate_trajectory(target_velocity, target_lane);
 } */
+
+/* Trajectory Planner::cost_inneficient_lane(const Trajectory& trajectory)
+
+    auto current_speed = ego.speed;
+auto fpredi
+
+    double cost =
+        2.0 - (intended_lane_speed + endpoint_lane_speed) / current_speed;
+
+int current_speed = parameters.desired_speed;
+int intended_lane = trajectory.characteristics.intended_lane_id;
+int endpoint_lane = trajectory.characteristics.endpoint_lane_id;
+
+double intended_lane_speed = predictions.lanes[intended_lane].speed;
+double endpoint_lane_speed = predictions.lanes[endpoint_lane].speed;
+double cost = 2.0 - (intended_lane_speed + endpoint_lane_speed) / current_speed;
+cost = fmax(0.0, cost);
+
+return cost * kFunctionWeight;
+}
+
+private:
+double kFunctionWeight{15};
+}
+;
+
+class PreferEmptyLaneCostFunction : public CostFunction {
+ public:
+  double getCost(const Trajectory& trajectory,
+                 const PredictionData& predictions, const EgoStatus&,
+                 const Parameters& parameters) override {
+    int intended_lane_id = trajectory.characteristics.intended_lane_id;
+    auto& lane = predictions.lanes[intended_lane_id];
+
+    double d_max = parameters.cost_empty_lane_dmax;
+    double c_max = parameters.cost_empty_lane_cmax;
+
+    double cost = 0;
+    if (lane.has_vehicle_ahead and lane.vehicle_ahead.distance < d_max) {
+      double distance = lane.vehicle_ahead.distance;
+      cost = c_max * (1.0 - distance / d_max);
+    }
+    // std::cout << "[Cost:EmptyLane]" << trajectory.characteristics.action
+    //           << ", ilane: " << intended_lane_id
+    //           << ", c: " << cost * kFunctionWeight << std::endl;
+
+    return cost * kFunctionWeight;
+  }
+
+ private:
+  double kFunctionWeight{10};
+}; */

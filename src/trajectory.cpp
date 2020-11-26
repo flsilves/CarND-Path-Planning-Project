@@ -24,7 +24,6 @@ void Trajectory::update(const std::vector<double>& x_,
     throw std::runtime_error(
         "Trajectory::update(): x and y have different lengths");
   }
-  std::cout << "DEQUE SIZE" << v.size() << std::endl;
   if (not v.empty()) {
     consume_velocity_points(PATH_LENGTH - x.size());
   }

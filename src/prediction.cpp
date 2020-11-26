@@ -128,13 +128,13 @@ void Prediction::predict_gaps(VehicleState ego, double future_ego_s,
     if (future_traffic_vehicle.s > future_ego_s) {
       if (delta_s < lane_gap.distance_ahead) {
         lane_gap.distance_ahead = delta_s;
-        lane_gap.vehicle_ahead = traffic_vehicle;
+        lane_gap.vehicle_ahead = future_traffic_vehicle;
         // lane_speed = traffic_vehicle.speed;
       }
     } else {
       if (delta_s < lane_gap.distance_behind) {
         lane_gap.distance_behind = delta_s;
-        lane_gap.vehicle_behind = traffic_vehicle;
+        lane_gap.vehicle_behind = future_traffic_vehicle;
       }
     }
 

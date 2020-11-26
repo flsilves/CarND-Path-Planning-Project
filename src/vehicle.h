@@ -24,6 +24,7 @@ class VehicleState {
   bool left_lane_exists() const;
   bool right_lane_exists() const;
 
+  double calculate_distance_to(const VehicleState& other) const;
   bool is_traffic_vehicle() const;
 
   void update(double x, double y, double s, double d, double yaw, double speed);

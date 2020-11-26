@@ -40,6 +40,10 @@ bool VehicleState::evaluate_continuity(VehicleState next) {
          (abs(next.y - y) < 5.0);
 }
 
+double VehicleState::calculate_distance_to(const VehicleState& other) const {
+  return distance(x, y, other.x, other.y);
+}
+
 VehicleState VehicleState::get_prediction(double future_time,
                                           const vector<double>& map_x,
                                           const vector<double>& map_y) {
