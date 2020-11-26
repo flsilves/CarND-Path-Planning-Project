@@ -45,34 +45,35 @@ void Prediction::update(nlohmann::json sensor_fusion) {
 }
 
 // VehicleState Prediction::get_front_vehicle()
+/*
+VehicleState Prediction::vehicle_close_ahead(int steps_into_future,
+                                             double ego_planned_s, int ego_lane,
+                                             double ego_s) const {
+  double predicted_gap{1000};
+  VehicleState closest_front_vehicle{};
 
-double Prediction::vehicle_close_ahead(int steps_into_future,
-                                       double ego_future_s, int ego_lane,
-                                       double ego_s) const {
   for (auto& vehicle_history : history) {
     if (vehicle_history.empty()) {
       continue;
     }
 
     auto vehicle = vehicle_history.back();
-    if (vehicle.get_lane() == ego_lane && vehicle.s > ego_s) {
-      double check_car_s =
-          vehicle.s + vehicle.speed * steps_into_future *
-                          0.02;  // TODO use parameter <time per point>
+    bool vehicle_in_same_lane = (vehicle.get_lane() == ego_lane);
+    bool vehicle_currently_in_front = (vehicle.s > ego_s);
 
-      if (check_car_s > ego_future_s) {  // TODO: use parameter gap
-        // std::cout << "Vehicle in front s[" << vehicle.s << "] v["
-        //          << vehicle.speed << "] s_gap[" << check_car_s << " - "
-        //          << ego_future_s << " = " << (check_car_s - ego_future_s)
-        //          << "] v[" << vehicle.speed << ']' << std::endl;
-        if (check_car_s - ego_future_s < 60) {
-          return vehicle.speed;
-        }
+    if (vehicle_in_same_lane && vehicle_currently_in_front) {
+      double future_vehicle_s =
+          vehicle.s + vehicle.speed * steps_into_future * TIME_PER_POINT;
+
+      double future_gap = future_vehicle_s - ego_planned_s;
+      if (future_gap < predicted_gap) {
+        predicted_gap = future_gap;
+        closest_front_vehicle = vehicle;
       }
     }
   }
-  return 49.5;
-}
+  return closest_front_vehicle;
+} */
 
 void Prediction::reset_lane_speeds() {
   for (auto& lane_speed : lane_speeds) {

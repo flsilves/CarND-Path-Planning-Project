@@ -16,20 +16,21 @@ TrajectoryGenerator::TrajectoryGenerator(const Trajectory& previous_trajectory,
       map(map),
       predictions(predictions) {}
 
-double TrajectoryGenerator::get_keep_lane_velocity() {  // avs
-
+double TrajectoryGenerator::get_keep_lane_velocity(Trajectory& new_trajectory) {
   double planned_velocity = 49.5;
+  unsigned ego_lane = ego.get_lane();
 
-  double front_speed = predictions.vehicle_close_ahead(
-      previous_trajectory.size(), previous_trajectory.end_s, ego.get_lane(),
-      ego.s);
+  double predicted_front_gap =
+      predictions.predicted_gaps[ego_lane].distance_ahead;
+  double current_lane_speed = predictions.lane_speeds[ego_lane];
 
-  std::cout << "front speed" << front_speed << std::endl;
-
-  if (front_speed < planned_velocity) {
-    planned_velocity = front_speed;
+  if (predicted_front_gap < 0) {
+    std::cout << "NEGATIVE GAP" << std::endl;
+    planned_velocity = current_lane_speed - 10.0;
+    new_trajectory.trim(5);
+  } else if ((predicted_front_gap / ego.speed) < KEEP_DISTANCE_TIME) {
+    planned_velocity = predicted_front_gap / KEEP_DISTANCE_TIME;
   }
-
   return planned_velocity;
 }
 
@@ -39,7 +40,7 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned end_lane,
 
   double target_velocity;
   if (ego.get_lane() == end_lane) {
-    target_velocity = get_keep_lane_velocity();
+    target_velocity = get_keep_lane_velocity(new_trajectory);
   }
 
   // if (end_lane != intended_lane) {

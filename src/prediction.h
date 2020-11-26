@@ -20,8 +20,8 @@ class Prediction {
   Prediction(const MapWaypoints& map, const VehicleState& ego);
   void update(nlohmann::json sensor_fusion);
 
-  double vehicle_close_ahead(int steps_into_future, double ego_future_s,
-                             int ego_lane, double ego_s) const;
+  //double vehicle_close_ahead(int steps_into_future, double ego_future_s,
+  //                           int ego_lane, double ego_s) const;
 
   void reset_lane_speeds();
   unsigned get_fastest_lane() const;
