@@ -74,9 +74,9 @@ double Planner::cost_inneficient_lane(const Trajectory& trajectory) {
   // std::cout << "current_speed" << current_speed << std::endl;
 
   std::cout << intended_lane_speed << "+" << end_lane_speed << "/"
-            << MAX_LANE_SPEED << " = ";
+            << TARGET_EGO_SPEED << " = ";
 
-  double xx = (intended_lane_speed + end_lane_speed) / MAX_LANE_SPEED;
+  double xx = (intended_lane_speed + end_lane_speed) / TARGET_EGO_SPEED;
 
   std::cout << xx << '\n';
 

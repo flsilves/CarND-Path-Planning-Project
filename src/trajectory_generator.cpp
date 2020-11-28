@@ -87,8 +87,8 @@ bool TrajectoryGenerator::validate_trajectory(Trajectory& trajectory) {
 
   // std::cout << "Traj end lane " << trajectory.end_lane << std::endl;
 
-  auto vehicle_ahead = predicted_gaps.vehicle_ahead;
-  auto vehicle_behind = predicted_gaps.vehicle_behind;
+  auto vehicle_ahead = predicted_gaps.vehicle_ahead.second;
+  auto vehicle_behind = predicted_gaps.vehicle_behind.first;
 
   bool validate_front{true}, validate_rear{true};
 
@@ -102,13 +102,13 @@ bool TrajectoryGenerator::validate_trajectory(Trajectory& trajectory) {
                                 trajectory.x.back(), trajectory.y.back());
 
     std::cout << "gap_front" << gap_front << std::endl;
-    validate_front = (gap_front > 3.0);
+    validate_front = (gap_front > 5.0);
   }
 
   if (vehicle_behind.is_valid()) {
-    double gap_behind = distance(vehicle_ahead.x, vehicle_ahead.y,
-                                 trajectory.x.back(), trajectory.y.back());
-    bool too_close_to_rear_vehicle = gap_behind < 3.0;
+    double gap_behind = distance(vehicle_behind.x, vehicle_behind.y,
+                                 trajectory.x.front(), trajectory.y.front());
+    bool too_close_to_rear_vehicle = gap_behind < 10.0;
     bool too_slow_relative_to_rear_vehicle =
         (trajectory.v.back() < vehicle_behind.speed);
     validate_rear = (not too_close_to_rear_vehicle) &&

@@ -13,8 +13,8 @@
 struct Gap {
   double distance_behind;
   double distance_ahead;
-  VehicleState vehicle_ahead;
-  VehicleState vehicle_behind;
+  std::pair<VehicleState, VehicleState> vehicle_ahead;
+  std::pair<VehicleState, VehicleState> vehicle_behind;
 };
 
 class Prediction {

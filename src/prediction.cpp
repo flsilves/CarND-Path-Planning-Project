@@ -77,7 +77,7 @@ VehicleState Prediction::vehicle_close_ahead(int steps_into_future,
 
 void Prediction::reset_lane_speeds() {
   for (auto& lane_speed : lane_speeds) {
-    lane_speed = MAX_LANE_SPEED;
+    lane_speed = TARGET_EGO_SPEED;
   }
 }
 
@@ -128,7 +128,7 @@ void Prediction::predict_gaps(VehicleState ego, double future_ego_s,
     if (traffic_vehicle.s > ego.s) {
       if (delta_s < lane_gap.distance_ahead) {
         lane_gap.distance_ahead = delta_s;
-        lane_gap.vehicle_ahead = future_traffic_vehicle;
+        lane_gap.vehicle_ahead = {traffic_vehicle, future_traffic_vehicle};
         // lane_speed = traffic_vehicle.speed;
       }
     } else {
@@ -137,7 +137,7 @@ void Prediction::predict_gaps(VehicleState ego, double future_ego_s,
         lane_gap.distance_behind = delta_s;
         // std::cout << "delta_s:" << delta_s << std::endl;
 
-        lane_gap.vehicle_behind = future_traffic_vehicle;
+        lane_gap.vehicle_behind = {traffic_vehicle, future_traffic_vehicle};
         // std::cout << lane_gap.vehicle_behind << std::endl;
       }
     }

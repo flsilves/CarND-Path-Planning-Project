@@ -2,8 +2,8 @@
 #define PARAMETERS_H
 
 constexpr double MPH_2_MPS{0.44704};
-constexpr auto MAX_LANE_SPEED{49.0};
-constexpr auto TARGET_EGO_SPEED{49.5};
+constexpr auto TARGET_EGO_SPEED{49.0};
+//constexpr auto TARGET_EGO_SPEED{49.5};
 
 constexpr auto MAX_ACCELERATION{.224}; // m/s per point
 constexpr double TIME_PER_POINT = .02;
