@@ -17,7 +17,7 @@ TrajectoryGenerator::TrajectoryGenerator(const Trajectory& previous_trajectory,
       predictions(predictions) {}
 
 double TrajectoryGenerator::get_keep_lane_velocity(Trajectory& new_trajectory) {
-  double planned_velocity = MAX_LANE_SPEED;
+  double planned_velocity = TARGET_EGO_SPEED;
   unsigned ego_lane = ego.get_lane();
 
   double predicted_front_gap =
@@ -40,7 +40,7 @@ double TrajectoryGenerator::prepare_lane_change_velocity(
 }
 
 double TrajectoryGenerator::lane_change_velocity(Trajectory& new_trajectory) {
-  double planned_velocity = MAX_LANE_SPEED;
+  double planned_velocity = TARGET_EGO_SPEED;
   return planned_velocity;
 }
 

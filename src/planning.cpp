@@ -45,11 +45,16 @@ vector<string> Planner::successor_states() {
 
 double Planner::calculate_cost(const Trajectory& trajectory) {
   const auto INNEFICIENCY_WEIGHT = 10.0;
-  double cost{0.0};
+  // double cost{0.0};
 
-  cost += cost_inneficient_lane(trajectory);
+  double c1 = cost_inneficient_lane(trajectory);
+  double c2 = cost_distance_to_fastest_lane(trajectory);
 
-  return cost;
+  std::cout << "c1:" << c1 << '\n';
+
+  std::cout << "c2:" << c2 << '\n';
+
+  return c1 + c2;
 }
 
 double Planner::cost_inneficient_lane(const Trajectory& trajectory) {
@@ -74,6 +79,26 @@ double Planner::cost_inneficient_lane(const Trajectory& trajectory) {
   return cost;
 }
 
+double Planner::cost_distance_to_fastest_lane(const Trajectory& trajectory) {
+  float cost;
+
+  unsigned fastest_lane = predictions.get_fastest_lane();
+  double fastest_lane_speed = predictions.lane_speeds[fastest_lane];
+
+  unsigned lane_changes = abs(fastest_lane - trajectory.end_lane);
+
+  double speed_gain =
+      fastest_lane_speed - predictions.lane_speeds[ego.get_lane()];
+
+  if (lane_changes == 0) {
+    cost = 0;
+  } else {
+    cost = speed_gain;
+  }
+
+  return cost;
+}
+
 Trajectory Planner::get_trajectory() {
   vector<string> states = successor_states();
 
@@ -83,8 +108,7 @@ Trajectory Planner::get_trajectory() {
   for (auto& candidate_state : states) {
     // std::cout << "\n\nplanning:" << candidate_state << std::endl;
     auto trajectory = plan_trajectory(candidate_state);
-    std::cout << "candidate:" << candidate_state << " size["
-              << trajectory.size() << '\n';
+    std::cout << "candidate:" << candidate_state << '\n';
 
     if (trajectory.size() != 0) {
       double cost = calculate_cost(trajectory);
