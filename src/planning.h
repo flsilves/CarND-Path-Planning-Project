@@ -7,6 +7,7 @@
 #include "trajectory.h"
 #include "trajectory_generator.h"
 #include "vehicle.h"
+#include <unordered_map>
 
 enum class State {
   KeepLane,
@@ -19,7 +20,7 @@ enum class State {
 class Planner {
  public:
   Planner(const VehicleState& ego, TrajectoryGenerator& gen,
-          const Prediction& predictions, const MapWaypoints& map);
+          const Prediction& predictions, const MapWaypoints& map,   const Trajectory& previous_trajectory);
   Planner step();
 
   Trajectory get_trajectory();
@@ -34,10 +35,13 @@ class Planner {
   std::string state{std::string("KL")};
   //double target_velocity;
   //unsigned target_lane{1};
+  std::unordered_map<std::string, Trajectory> state_trajectories;
+  std::unordered_map<std::string, double> state_costs;
   TrajectoryGenerator& trajectory_generator;
   const VehicleState& ego;
   const MapWaypoints& map;
   const Prediction& predictions;
+  const Trajectory& previous_trajectory;
 };
 
 std::ostream& operator<<(std::ostream& os, const Planner& planner);

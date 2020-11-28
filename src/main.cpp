@@ -32,7 +32,8 @@ int main() {
   Prediction prediction(map, ego);
   TrajectoryGenerator trajectory_generator{previous_trajectory, ego, map,
                                            prediction};
-  Planner motion_planning{ego, trajectory_generator, prediction, map};
+  Planner motion_planning{ego, trajectory_generator, prediction, map,
+                          previous_trajectory};
 
   h.onMessage([&ego, &previous_trajectory, &planned_trajectory, &map,
                &prediction, &motion_planning](uWS::WebSocket<uWS::SERVER> ws,
@@ -128,7 +129,7 @@ void print_info(const VehicleState& ego, const VehicleState& prev_ego,
             << "v_avg[" << average_speed << "]\n\n";
 
   std::cout << "|PLANNER|\n"
-            << planner << "\n\n";            
+            << planner << "\n";            
 
   if (not previous_trajectory.empty()) {
     std::cout << "|PREV_PATH|\n" << previous_trajectory << "\n\n";

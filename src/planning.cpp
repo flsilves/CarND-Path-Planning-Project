@@ -10,16 +10,18 @@ static std::map<string, int> lane_direction = {
 }  // namespace
 
 Planner::Planner(const VehicleState& ego, TrajectoryGenerator& gen,
-                 const Prediction& predictions, const MapWaypoints& map)
+                 const Prediction& predictions, const MapWaypoints& map,
+                 const Trajectory& previous_trajectory)
     : ego(ego),
       trajectory_generator(gen),
       map(map),
       predictions(predictions),
-      state("KL") {}
+      state("KL"),
+      previous_trajectory(previous_trajectory) {}
 
 vector<string> Planner::successor_states() {
   vector<string> possible_states;
-  possible_states.push_back("KL");
+  possible_states.push_back(state);
   if (state.compare("KL") == 0) {
     if (ego.left_lane_exists()) {
       possible_states.push_back("PLCL");
@@ -28,11 +30,13 @@ vector<string> Planner::successor_states() {
       possible_states.push_back("PLCR");
     }
   } else if (state.compare("PLCL") == 0) {
-    possible_states.push_back("PLCL");
     possible_states.push_back("LCL");
   } else if (state.compare("PLCR") == 0) {
-    possible_states.push_back("PLCR");
     possible_states.push_back("LCR");
+  } else if (state.compare("LCL") == 0) {
+    possible_states.push_back("KL");
+  } else if (state.compare("LCR") == 0) {
+    possible_states.push_back("KL");
   }
   return possible_states;
 }
@@ -64,10 +68,8 @@ double Planner::cost_inneficient_lane(const Trajectory& trajectory) {
 Trajectory Planner::get_trajectory() {
   vector<string> states = successor_states();
 
-  std::unordered_map<string, Trajectory> state_trajectories;
-  std::unordered_map<string, double> state_costs;
-
-  // return plan_trajectory("KL");
+  state_costs.clear();
+  state_trajectories.clear();
 
   for (auto& candidate_state : states) {
     std::cout << "\n\nplanning:" << candidate_state << std::endl;
@@ -102,7 +104,13 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
 
   unsigned current_lane, intended_lane, end_lane;
 
-  current_lane = ego.get_lane();
+  std::cout << "CURRENT_STATE:" << std::endl;
+
+  current_lane = previous_trajectory.end_lane;
+
+  std::cout << "previous_trajectory_end_lane:" << previous_trajectory.end_lane
+            << std::endl;
+
   intended_lane = current_lane + lane_direction[candidate_state];
 
   if (candidate_state.compare("KL") == 0 ||
@@ -129,98 +137,22 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Planner& planner) {
+  std::vector<std::string> all_states{"KL", "PLCL", "PLCR", "LCL", "LCR"};
+
   os << std::fixed << std::setprecision(2);
-  os << "state[" << planner.state << "] ";
-  // os << "target_lane[" << planner.target_lane << "] ";
+  os << "current_state[" << planner.state << "]\n";
+
+  for (auto s : all_states) {
+    double cost;
+    if (planner.state_costs.find(s) != planner.state_costs.end()) {
+      cost = planner.state_costs.at(s);
+      os << s << " cost[" << cost << "]\n";
+    } else {
+      os << s << " cost["
+         << "NA"
+         << "]\n";
+    }
+  }
+
   return os;
 }
-
-/* Trajectory Planner::get_trajectory() {
-  double front_speed = predictions.vehicle_close_ahead(
-      trajectory_generator.previous_trajectory_.size(),
-      trajectory_generator.previous_trajectory_.end_s, ego.get_lane(), ego.s);
-
-  if (front_speed < target_velocity) {
-    if (fabs(front_speed - target_velocity) > 1.0) {
-      target_velocity -= MAX_ACCELERATION;
-    } else {
-      target_velocity = front_speed;
-    }
-    //
-  } else {
-    target_velocity += MAX_ACCELERATION;
-  }
-
-  if (state == State::ChangeLeft) {
-    if (ego.get_lane() == target_lane) {
-      state = State::KeepLane;
-    }
-  } else {
-    if (target_velocity > 20.0) {
-      unsigned ideal_lane = predictions.get_fastest_lane();
-      std::cout << "\n****IDEAL:" << ideal_lane << std::endl;
-
-      if (ideal_lane != ego.get_lane() &&
-          fabs(ideal_lane - ego.get_lane()) < 1.1) {
-        if (predictions.predicted_gaps[target_lane].distance_behind > 30.0 &&
-            predictions.predicted_gaps[target_lane].distance_ahead > 30.0) {
-          state = State::ChangeLeft;
-          target_lane = ideal_lane;
-        }
-      }
-    }
-  }
-  return trajectory_generator.generate_trajectory(target_velocity, target_lane);
-} */
-
-/* Trajectory Planner::cost_inneficient_lane(const Trajectory& trajectory)
-
-    auto current_speed = ego.speed;
-auto fpredi
-
-    double cost =
-        2.0 - (intended_lane_speed + endpoint_lane_speed) / current_speed;
-
-int current_speed = parameters.desired_speed;
-int intended_lane = trajectory.characteristics.intended_lane_id;
-int endpoint_lane = trajectory.characteristics.endpoint_lane_id;
-
-double intended_lane_speed = predictions.lanes[intended_lane].speed;
-double endpoint_lane_speed = predictions.lanes[endpoint_lane].speed;
-double cost = 2.0 - (intended_lane_speed + endpoint_lane_speed) / current_speed;
-cost = fmax(0.0, cost);
-
-return cost * kFunctionWeight;
-}
-
-private:
-double kFunctionWeight{15};
-}
-;
-
-class PreferEmptyLaneCostFunction : public CostFunction {
- public:
-  double getCost(const Trajectory& trajectory,
-                 const PredictionData& predictions, const EgoStatus&,
-                 const Parameters& parameters) override {
-    int intended_lane_id = trajectory.characteristics.intended_lane_id;
-    auto& lane = predictions.lanes[intended_lane_id];
-
-    double d_max = parameters.cost_empty_lane_dmax;
-    double c_max = parameters.cost_empty_lane_cmax;
-
-    double cost = 0;
-    if (lane.has_vehicle_ahead and lane.vehicle_ahead.distance < d_max) {
-      double distance = lane.vehicle_ahead.distance;
-      cost = c_max * (1.0 - distance / d_max);
-    }
-    // std::cout << "[Cost:EmptyLane]" << trajectory.characteristics.action
-    //           << ", ilane: " << intended_lane_id
-    //           << ", c: " << cost * kFunctionWeight << std::endl;
-
-    return cost * kFunctionWeight;
-  }
-
- private:
-  double kFunctionWeight{10};
-}; */

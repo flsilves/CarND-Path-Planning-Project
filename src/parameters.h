@@ -7,7 +7,7 @@ constexpr auto TARGET_EGO_SPEED{49.5};
 
 constexpr auto MAX_ACCELERATION{.224}; // m/s per point
 constexpr double TIME_PER_POINT = .02;
-constexpr double HORIZON_DISTANCE{30.0};
+constexpr double HORIZON_DISTANCE{50.0};
 constexpr double KEEP_DISTANCE_TIME{0.7};
 constexpr auto PATH_LENGTH{50u};
 

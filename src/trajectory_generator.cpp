@@ -73,11 +73,11 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned intended_lane,
   fill_trajectory_points(new_trajectory, planned_velocity, end_lane);
   new_trajectory.calculate_end_frenet(map.x, map.y);
 
-  if (validate_trajectory(new_trajectory)) {
-    return new_trajectory;
-  } else {
-    return {};
-  }
+  // if (validate_trajectory(new_trajectory)) {  // only validate lane changes
+  return new_trajectory;
+  //} else {
+  //  return {};
+  //}
 }
 
 bool TrajectoryGenerator::validate_trajectory(Trajectory& trajectory) {
@@ -125,8 +125,8 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
                                                  double target_velocity,
                                                  unsigned end_lane) {
   // Hyper-parameters
-  const double anchor_spacement{50.0};
-  const unsigned extra_anchors{2};
+  const double anchor_spacement{40.0};
+  const unsigned extra_anchors{3};
 
   anchors_trim();
   anchors_add(anchor_spacement, extra_anchors, end_lane);
