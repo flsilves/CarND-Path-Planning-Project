@@ -1,6 +1,6 @@
 #include "planning.h"
 
-#include <map>
+#include <unordered_map>
 
 using std::string;
 using std::vector;
@@ -18,30 +18,30 @@ Planner::Planner(const VehicleState& ego, TrajectoryGenerator& gen,
       state("KL") {}
 
 vector<string> Planner::successor_states() {
-  vector<string> states;
-  states.push_back("KL");
+  vector<string> possible_states;
+  possible_states.push_back("KL");
   if (state.compare("KL") == 0) {
     if (ego.left_lane_exists()) {
-      states.push_back("PLCL");
+      possible_states.push_back("PLCL");
     }
     if ((ego.left_lane_exists())) {
-      states.push_back("PLCR");
+      possible_states.push_back("PLCR");
     }
   } else if (state.compare("PLCL") == 0) {
-    states.push_back("PLCL");
-    states.push_back("LCL");
+    possible_states.push_back("PLCL");
+    possible_states.push_back("LCL");
   } else if (state.compare("PLCR") == 0) {
-    states.push_back("PLCR");
-    states.push_back("LCR");
+    possible_states.push_back("PLCR");
+    possible_states.push_back("LCR");
   }
-  return states;
+  return possible_states;
 }
 
 double Planner::calculate_cost(const Trajectory& trajectory) {
   const auto INNEFICIENCY_WEIGHT = 10.0;
   double cost{0.0};
 
-  cost += INNEFICIENCY_WEIGHT * cost_inneficient_lane(trajectory);
+  cost += cost_inneficient_lane(trajectory);
 
   return cost;
 }
@@ -63,8 +63,9 @@ double Planner::cost_inneficient_lane(const Trajectory& trajectory) {
 
 Trajectory Planner::get_trajectory() {
   vector<string> states = successor_states();
-  vector<float> costs;
-  vector<Trajectory> final_trajectories;  // TODO replace with a map
+
+  std::unordered_map<string, Trajectory> state_trajectories;
+  std::unordered_map<string, double> state_costs;
 
   // return plan_trajectory("KL");
 
@@ -74,16 +75,26 @@ Trajectory Planner::get_trajectory() {
     if (trajectory.size() != 0) {
       double cost = calculate_cost(trajectory);
       std::cout << "cost:" << cost << std::endl;
-      costs.push_back(cost);
-      // costs.push_back(10.0);
-      final_trajectories.push_back(trajectory);
+
+      state_trajectories[candidate_state] = trajectory;
+      state_costs[candidate_state] = cost;
     }
   }
 
-  auto it_best_cost = min_element(begin(costs), end(costs));
-  unsigned best_idx = distance(begin(costs), it_best_cost);
+  for (auto it : state_costs) {
+    std::cout << "STATE:" << it.first << " COST:" << it.second << std::endl;
+  }
 
-  return final_trajectories[best_idx];
+  auto next_state = std::min_element(
+      state_costs.begin(), state_costs.end(),
+      [](const std::pair<string, double>& a,
+         const std::pair<string, double>& b) { return a.second < b.second; });
+
+  std::cout << "NEXT_STATE:" << next_state->first << std::endl;
+
+  state = next_state->first;
+
+  return state_trajectories[state];
 }
 
 Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
@@ -120,7 +131,7 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
 std::ostream& operator<<(std::ostream& os, const Planner& planner) {
   os << std::fixed << std::setprecision(2);
   os << "state[" << planner.state << "] ";
-  os << "target_lane[" << planner.target_lane << "] ";
+  // os << "target_lane[" << planner.target_lane << "] ";
   return os;
 }
 

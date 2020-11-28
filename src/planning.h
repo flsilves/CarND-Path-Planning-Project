@@ -33,7 +33,7 @@ class Planner {
  public:
   std::string state{std::string("KL")};
   //double target_velocity;
-  unsigned target_lane{1};
+  //unsigned target_lane{1};
   TrajectoryGenerator& trajectory_generator;
   const VehicleState& ego;
   const MapWaypoints& map;

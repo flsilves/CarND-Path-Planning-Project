@@ -136,7 +136,7 @@ void print_info(const VehicleState& ego, const VehicleState& prev_ego,
 
   std::cout << "|NEXT_PATH|\n" << planned_trajectory << "\n\n";
 
-  //std::cout << "|ROAD VEHICLES|\n" << prediction << "\n";
-  //std::cout << "--------------------------------" << std::endl;
+  std::cout << "|ROAD VEHICLES|\n" << prediction << "\n";
+  std::cout << "--------------------------------" << std::endl;
   // clang-format onOBJECT_HISTORY
 }

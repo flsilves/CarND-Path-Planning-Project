@@ -26,7 +26,7 @@ double TrajectoryGenerator::get_keep_lane_velocity(Trajectory& new_trajectory) {
 
   if (predicted_front_gap < 0) {
     // std::cout << "NEGATIVE GAP" << std::endl;
-    planned_velocity = current_lane_speed - 10.0;  // EMERGENCY_BRAKE
+    planned_velocity = current_lane_speed - 20.0;  // EMERGENCY_BRAKE
     new_trajectory.trim(5);
   } else if ((predicted_front_gap / ego.speed) < KEEP_DISTANCE_TIME) {
     planned_velocity = predicted_front_gap / KEEP_DISTANCE_TIME;
