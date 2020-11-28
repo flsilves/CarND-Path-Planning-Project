@@ -22,6 +22,7 @@ class Trajectory {
                             const std::vector<double>& map_y);
 
   double get_last_point_velocity() const ;
+  
 
   void trim(std::size_t new_size);
   void consume_velocity_points(unsigned n_points);
@@ -30,7 +31,7 @@ class Trajectory {
   std::size_t size() const;
 
  public:
-  std::vector<double> x, y;
+  std::vector<double> x{}, y{};
   std::deque<double> v{};
   double end_angle{0.0};
   double end_s{0.0}, end_d{0.0};

@@ -26,12 +26,14 @@ vector<string> Planner::successor_states() {
     if (ego.left_lane_exists()) {
       possible_states.push_back("PLCL");
     }
-    if ((ego.left_lane_exists())) {
+    if ((ego.right_lane_exists())) {
       possible_states.push_back("PLCR");
     }
   } else if (state.compare("PLCL") == 0) {
+    possible_states.push_back("KL");
     possible_states.push_back("LCL");
   } else if (state.compare("PLCR") == 0) {
+    possible_states.push_back("KL");
     possible_states.push_back("LCR");
   } else if (state.compare("LCL") == 0) {
     possible_states.push_back("KL");
@@ -92,9 +94,11 @@ Trajectory Planner::get_trajectory() {
       [](const std::pair<string, double>& a,
          const std::pair<string, double>& b) { return a.second < b.second; });
 
-  std::cout << "NEXT_STATE:" << next_state->first << std::endl;
+  if (state_costs.at(state) - next_state->second > 0.20) {
+    state = next_state->first;
+  }
 
-  state = next_state->first;
+  std::cout << "NEXT_STATE:" << next_state->first << std::endl;
 
   return state_trajectories[state];
 }
@@ -104,9 +108,7 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
 
   unsigned current_lane, intended_lane, end_lane;
 
-  std::cout << "CURRENT_STATE:" << std::endl;
-
-  current_lane = previous_trajectory.end_lane;
+  current_lane = ego.get_lane();
 
   std::cout << "previous_trajectory_end_lane:" << previous_trajectory.end_lane
             << std::endl;
@@ -128,6 +130,15 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
     // std::cout << "intendend" << intended_lane << std::endl;
 
     // std::cout << "end" << end_lane << std::endl;
+  }
+
+  std::cout << "candidate_state:" << candidate_state << std::endl;
+
+  std::cout << "intended_lane:" << intended_lane << std::endl;
+  std::cout << "end_lane:" << end_lane << std::endl;
+
+  if (end_lane < 0 || end_lane > 2 || intended_lane < 0 || intended_lane > 2) {
+    return {};
   }
 
   trajectory_generator.anchors_init();
