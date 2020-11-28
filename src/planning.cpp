@@ -47,14 +47,20 @@ double Planner::calculate_cost(const Trajectory& trajectory) {
   const auto INNEFICIENCY_WEIGHT = 10.0;
   // double cost{0.0};
 
-  double c1 = cost_inneficient_lane(trajectory);
+  double c1 = 10 * cost_inneficient_lane(trajectory);
   double c2 = cost_distance_to_fastest_lane(trajectory);
+  double c3 = 2 * cost_lane_change(trajectory);
+  double c4 = 5 * cost_front_gap(trajectory);
 
   std::cout << "c1:" << c1 << '\n';
 
   std::cout << "c2:" << c2 << '\n';
 
-  return c1 + c2;
+  std::cout << "c3:" << c3 << '\n';
+
+  std::cout << "c4:" << c4 << '\n';
+
+  return c1 + c2 + c3 + c4;
 }
 
 double Planner::cost_inneficient_lane(const Trajectory& trajectory) {
@@ -79,24 +85,44 @@ double Planner::cost_inneficient_lane(const Trajectory& trajectory) {
   return cost;
 }
 
+double Planner::cost_front_gap(const Trajectory& trajectory) {
+  double gap_ahead =
+      predictions.predicted_gaps[trajectory.intended_lane].distance_ahead;
+
+  double cost = (150 - gap_ahead) / 150;
+
+  cost = fmax(0.0, cost);
+  return cost;
+}
+
 double Planner::cost_distance_to_fastest_lane(const Trajectory& trajectory) {
-  float cost;
+  double cost;
 
   unsigned fastest_lane = predictions.get_fastest_lane();
   double fastest_lane_speed = predictions.lane_speeds[fastest_lane];
 
-  unsigned lane_changes = abs(fastest_lane - trajectory.end_lane);
+  unsigned distance_to_fastest_lane =
+      abs(fastest_lane - trajectory.intended_lane);
+  std::cout << "distance_to_fastest_lane:" << distance_to_fastest_lane << '\n';
 
   double speed_gain =
       fastest_lane_speed - predictions.lane_speeds[ego.get_lane()];
 
-  if (lane_changes == 0) {
+  if (distance_to_fastest_lane == 0) {
     cost = 0;
   } else {
-    cost = speed_gain;
+    cost = distance_to_fastest_lane * speed_gain;
   }
 
   return cost;
+}
+
+double Planner::cost_lane_change(const Trajectory& trajectory) {
+  if (ego.get_lane() == trajectory.intended_lane) {
+    return 0.0;
+  } else {
+    return 1.0;
+  }
 }
 
 Trajectory Planner::get_trajectory() {
@@ -128,13 +154,7 @@ Trajectory Planner::get_trajectory() {
       [](const std::pair<string, double>& a,
          const std::pair<string, double>& b) { return a.second < b.second; });
 
-  if (state_costs.find(state) != state_costs.end()) {
-    if (state_costs.at(state) - next_state->second > 0.05) {
-      state = next_state->first;
-    }
-  } else {
-    state = next_state->first;
-  }
+  state = next_state->first;
 
   // std::cout << "NEXT_STATE:" << next_state->first << std::endl;
 

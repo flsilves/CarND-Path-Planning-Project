@@ -36,7 +36,7 @@ double TrajectoryGenerator::get_keep_lane_velocity(Trajectory& new_trajectory) {
 
 double TrajectoryGenerator::prepare_lane_change_velocity(
     Trajectory& new_trajectory, unsigned intended_lane) {
-  return predictions.lane_speeds[intended_lane];
+  return fmin(predictions.lane_speeds[intended_lane] + 3.0, 49.5);
 }
 
 double TrajectoryGenerator::lane_change_velocity(Trajectory& new_trajectory) {
@@ -83,7 +83,7 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned intended_lane,
 
 bool TrajectoryGenerator::validate_trajectory(Trajectory& trajectory) {
   // std::cout << "DEBUG" << predictions << std::endl;
-  auto predicted_gaps = predictions.predicted_gaps[trajectory.end_lane];
+  auto predicted_gaps = predictions.predicted_gaps[trajectory.intended_lane];
 
   // std::cout << "Traj end lane " << trajectory.end_lane << std::endl;
 
@@ -102,13 +102,13 @@ bool TrajectoryGenerator::validate_trajectory(Trajectory& trajectory) {
                                 trajectory.x.back(), trajectory.y.back());
 
     std::cout << "gap_front" << gap_front << std::endl;
-    validate_front = (gap_front > 1.0);
+    validate_front = (gap_front > 3.0);
   }
 
   if (vehicle_behind.is_valid()) {
     double gap_behind = distance(vehicle_ahead.x, vehicle_ahead.y,
                                  trajectory.x.back(), trajectory.y.back());
-    bool too_close_to_rear_vehicle = gap_behind < 2.0;
+    bool too_close_to_rear_vehicle = gap_behind < 3.0;
     bool too_slow_relative_to_rear_vehicle =
         (trajectory.v.back() < vehicle_behind.speed);
     validate_rear = (not too_close_to_rear_vehicle) &&

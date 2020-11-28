@@ -28,8 +28,10 @@ class Planner {
   Trajectory get_trajectory();
   double cost_inneficient_lane(const Trajectory& trajectory);
   double cost_distance_to_fastest_lane(const Trajectory& trajectory);
-  double calculate_cost(const Trajectory& trajectory);
+  double cost_front_gap(const Trajectory& trajectory);
+  double cost_lane_change(const Trajectory& trajectory);
 
+  double calculate_cost(const Trajectory& trajectory);
   Trajectory plan_trajectory(const std::string& candidate_state);
 
   std::vector<std::string> successor_states();
