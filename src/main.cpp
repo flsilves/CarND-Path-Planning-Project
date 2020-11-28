@@ -66,7 +66,7 @@ int main() {
 
           planned_trajectory = motion_planning.get_trajectory();
 
-          previous_trajectory.v = planned_trajectory.v;
+          previous_trajectory = planned_trajectory;
 
           print_info(ego, prev_ego, previous_trajectory, planned_trajectory,
                      prediction, motion_planning);
@@ -110,26 +110,28 @@ void print_info(const VehicleState& ego, const VehicleState& prev_ego,
                 const Trajectory& previous_trajectory,
                 const Trajectory& planned_trajectory,
                 const Prediction& prediction, const Planner& planner) {
-  double delta_x = fabs(ego.x - prev_ego.x);
-  double delta_y = fabs(ego.y - prev_ego.y);
-
-  double distance_traveled = sqrt(delta_x * delta_x + delta_y * delta_y);
-
-  double average_speed = (ego.speed / 2 + prev_ego.speed / 2);
-
-  double time = distance_traveled / average_speed;
+  // double delta_x = fabs(ego.x - prev_ego.x);
+  // double delta_y = fabs(ego.y - prev_ego.y);
+  //
+  // double distance_traveled = sqrt(delta_x * delta_x + delta_y * delta_y);
+  //
+  // double average_speed = (ego.speed / 2 + prev_ego.speed / 2);
+  //
+  // double time = distance_traveled / average_speed;
 
   // clang-format off
   std::cout << "|EGO|\n" 
             << ego << "\n\n";
 
-  std::cout << "|STEP|\n"
-            << "t_delta[" << time << "] "
-            << "dist_delta[" << distance_traveled << "] "
-            << "v_avg[" << average_speed << "]\n\n";
+  //std::cout << "|STEP|\n"
+  //          << "t_delta[" << time << "] "
+  //          << "dist_delta[" << distance_traveled << "] "
+  //          << "v_avg[" << average_speed << "]\n\n";
+
+  std::cout << prediction << "\n\n";
 
   std::cout << "|PLANNER|\n"
-            << planner << "\n";            
+            << planner << "\n\n";            
 
   if (not previous_trajectory.empty()) {
     std::cout << "|PREV_PATH|\n" << previous_trajectory << "\n\n";
@@ -137,7 +139,8 @@ void print_info(const VehicleState& ego, const VehicleState& prev_ego,
 
   std::cout << "|NEXT_PATH|\n" << planned_trajectory << "\n\n";
 
-  std::cout << "|ROAD VEHICLES|\n" << prediction << "\n";
+
+
   std::cout << "--------------------------------" << std::endl;
   // clang-format onOBJECT_HISTORY
 }

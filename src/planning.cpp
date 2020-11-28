@@ -58,11 +58,18 @@ double Planner::cost_inneficient_lane(const Trajectory& trajectory) {
   double end_lane_speed = predictions.lane_speeds[trajectory.end_lane];
   double current_speed = ego.speed;
 
-  std::cout << "end_lane_speed" << end_lane_speed << std::endl;
-  std::cout << "intended_lane_speed" << intended_lane_speed << std::endl;
-  std::cout << "current_speed" << current_speed << std::endl;
+  // std::cout << "end_lane_speed" << end_lane_speed << std::endl;
+  // std::cout << "intended_lane_speed" << intended_lane_speed << std::endl;
+  // std::cout << "current_speed" << current_speed << std::endl;
 
-  double cost = 2.0 - (intended_lane_speed + end_lane_speed) / current_speed;
+  std::cout << intended_lane_speed << "+" << end_lane_speed << "/"
+            << MAX_LANE_SPEED << " = ";
+
+  double xx = (intended_lane_speed + end_lane_speed) / MAX_LANE_SPEED;
+
+  std::cout << xx << '\n';
+
+  double cost = 2.0 - xx;
   cost = fmax(0.0, cost);
   return cost;
 }
@@ -74,31 +81,38 @@ Trajectory Planner::get_trajectory() {
   state_trajectories.clear();
 
   for (auto& candidate_state : states) {
-    std::cout << "\n\nplanning:" << candidate_state << std::endl;
+    // std::cout << "\n\nplanning:" << candidate_state << std::endl;
     auto trajectory = plan_trajectory(candidate_state);
+    std::cout << "candidate:" << candidate_state << " size["
+              << trajectory.size() << '\n';
+
     if (trajectory.size() != 0) {
       double cost = calculate_cost(trajectory);
-      std::cout << "cost:" << cost << std::endl;
+      // std::cout << "cost:" << cost << std::endl;
 
       state_trajectories[candidate_state] = trajectory;
       state_costs[candidate_state] = cost;
     }
   }
 
-  for (auto it : state_costs) {
-    std::cout << "STATE:" << it.first << " COST:" << it.second << std::endl;
-  }
+  // for (auto it : state_costs) {
+  // std::cout << "STATE:" << it.first << " COST:" << it.second << std::endl;
+  //}
 
   auto next_state = std::min_element(
       state_costs.begin(), state_costs.end(),
       [](const std::pair<string, double>& a,
          const std::pair<string, double>& b) { return a.second < b.second; });
 
-  if (state_costs.at(state) - next_state->second > 0.20) {
+  if (state_costs.find(state) != state_costs.end()) {
+    if (state_costs.at(state) - next_state->second > 0.05) {
+      state = next_state->first;
+    }
+  } else {
     state = next_state->first;
   }
 
-  std::cout << "NEXT_STATE:" << next_state->first << std::endl;
+  // std::cout << "NEXT_STATE:" << next_state->first << std::endl;
 
   return state_trajectories[state];
 }
@@ -110,8 +124,9 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
 
   current_lane = ego.get_lane();
 
-  std::cout << "previous_trajectory_end_lane:" << previous_trajectory.end_lane
-            << std::endl;
+  // std::cout << "previous_trajectory_end_lane:" <<
+  // previous_trajectory.end_lane
+  //          << std::endl;
 
   intended_lane = current_lane + lane_direction[candidate_state];
 
@@ -132,16 +147,20 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
     // std::cout << "end" << end_lane << std::endl;
   }
 
-  std::cout << "candidate_state:" << candidate_state << std::endl;
+  // std::cout << "candidate_state:" << candidate_state << std::endl;
 
-  std::cout << "intended_lane:" << intended_lane << std::endl;
-  std::cout << "end_lane:" << end_lane << std::endl;
+  // std::cout << "intended_lane:" << intended_lane << std::endl;
+  // std::cout << "end_lane:" << end_lane << std::endl;
 
   if (end_lane < 0 || end_lane > 2 || intended_lane < 0 || intended_lane > 2) {
     return {};
   }
 
   trajectory_generator.anchors_init();
+
+  // std::cout << "candidate:" << candidate_state << " i[" << intended_lane
+  //          << "] end[" << end_lane << "]\n";
+
   trajectory =
       trajectory_generator.generate_trajectory(intended_lane, end_lane);
   return trajectory;

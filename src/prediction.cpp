@@ -154,14 +154,14 @@ void Prediction::predict_gaps(VehicleState ego, double future_ego_s,
 std::ostream& operator<<(std::ostream& os, const Prediction& rhs) {
   os << std::fixed << std::setprecision(2);
   // clang-format off
-  for (auto& vehicle_history : rhs.history) {
-    if (not vehicle_history.empty()) {
-      os << vehicle_history.back() << '\n';
-    } else {
-      os << "EMPTY" << '\n';
-    }
-  }
-  os << '\n';
+  //for (auto& vehicle_history : rhs.history) {
+  //  if (not vehicle_history.empty()) {
+  //    os << vehicle_history.back() << '\n';
+  //  } else {
+  //    os << "EMPTY" << '\n';
+  //  }
+  //}
+  //os << '\n';
   os << "|LANE_SPEEDS|\n";
   os << "Left[" << rhs.lane_speeds[0] << "] ";
   os << "Center[" << rhs.lane_speeds[1]  << "] ";

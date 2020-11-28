@@ -17,7 +17,7 @@ TrajectoryGenerator::TrajectoryGenerator(const Trajectory& previous_trajectory,
       predictions(predictions) {}
 
 double TrajectoryGenerator::get_keep_lane_velocity(Trajectory& new_trajectory) {
-  double planned_velocity = 49.5;
+  double planned_velocity = MAX_LANE_SPEED;
   unsigned ego_lane = ego.get_lane();
 
   double predicted_front_gap =
@@ -40,7 +40,7 @@ double TrajectoryGenerator::prepare_lane_change_velocity(
 }
 
 double TrajectoryGenerator::lane_change_velocity(Trajectory& new_trajectory) {
-  double planned_velocity = 49.5;
+  double planned_velocity = MAX_LANE_SPEED;
   return planned_velocity;
 }
 
@@ -51,8 +51,8 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned intended_lane,
   new_trajectory.intended_lane = intended_lane;
   new_trajectory.end_lane = end_lane;
 
-  std::cout << "intended_lane" << intended_lane << '\n';
-  std::cout << "end_lane" << end_lane << '\n';
+  // std::cout << "intended_lane" << intended_lane << '\n';
+  // std::cout << "end_lane" << end_lane << '\n';
 
   double planned_velocity;
 
@@ -73,11 +73,12 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned intended_lane,
   fill_trajectory_points(new_trajectory, planned_velocity, end_lane);
   new_trajectory.calculate_end_frenet(map.x, map.y);
 
-  // if (validate_trajectory(new_trajectory)) {  // only validate lane changes
+  if (previous_trajectory.end_lane != end_lane) {
+    if (not validate_trajectory(new_trajectory)) {
+      return {};
+    }
+  }
   return new_trajectory;
-  //} else {
-  //  return {};
-  //}
 }
 
 bool TrajectoryGenerator::validate_trajectory(Trajectory& trajectory) {
@@ -125,7 +126,7 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
                                                  double target_velocity,
                                                  unsigned end_lane) {
   // Hyper-parameters
-  const double anchor_spacement{40.0};
+  const double anchor_spacement{55.0};
   const unsigned extra_anchors{3};
 
   anchors_trim();
@@ -135,7 +136,7 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
   spline.set_points(anchors_x, anchors_y);
 
   auto missing_points = PATH_LENGTH - trajectory.size();
-  std::cout << "Missing points" << missing_points << std::endl;
+  // std::cout << "Missing points" << missing_points << std::endl;
 
   double x{0}, y{0};
   double next_point_velocity = trajectory.get_last_point_velocity();
