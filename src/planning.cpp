@@ -52,20 +52,11 @@ vector<string> Planner::successor_states() {
 
 double Planner::calculate_cost(const Trajectory& trajectory) {
   const auto INNEFICIENCY_WEIGHT = 10.0;
-  // double cost{0.0};
 
   double c1 = 10 * cost_inneficient_lane(trajectory);
   double c2 = cost_distance_to_fastest_lane(trajectory);
   double c3 = 4 * cost_lane_change(trajectory);
   double c4 = 5 * cost_front_gap(trajectory);
-
-  // std::cout << "c1:" << c1 << '\n';
-
-  // std::cout << "c2:" << c2 << '\n';
-
-  // std::cout << "c3:" << c3 << '\n';
-
-  // std::cout << "c4:" << c4 << '\n';
 
   return c1 + c2 + c3 + c4;
 }
@@ -155,42 +146,22 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
 
   current_lane = ego.get_lane();
 
-  // std::cout << "previous_trajectory_end_lane:" <<
-  // previous_trajectory.end_lane
-  //          << std::endl;
-
   intended_lane = current_lane + lane_direction[candidate_state];
 
   if (candidate_state.compare("KL") == 0 ||
       candidate_state.compare("PLCL") == 0 ||
       candidate_state.compare("PLCR") == 0) {
     end_lane = current_lane;
-    // std::cout << "state1" << candidate_state << std::endl;
-    // std::cout << "intendend" << intended_lane << std::endl;
-    // std::cout << "end" << end_lane << std::endl;
-
   } else if (candidate_state.compare("LCL") == 0 ||
              candidate_state.compare("LCR") == 0) {
     end_lane = intended_lane;
-    // std::cout << "state2" << candidate_state << std::endl;
-    // std::cout << "intendend" << intended_lane << std::endl;
-
-    // std::cout << "end" << end_lane << std::endl;
   }
-
-  // std::cout << "candidate_state:" << candidate_state << std::endl;
-
-  // std::cout << "intended_lane:" << intended_lane << std::endl;
-  // std::cout << "end_lane:" << end_lane << std::endl;
 
   if (end_lane < 0 || end_lane > 2 || intended_lane < 0 || intended_lane > 2) {
     return {};
   }
 
   trajectory_generator.anchors_init();
-
-  // std::cout << "candidate:" << candidate_state << " i[" << intended_lane
-  //          << "] end[" << end_lane << "]\n";
 
   trajectory = trajectory_generator.generate_trajectory(intended_lane, end_lane,
                                                         candidate_state);
@@ -214,6 +185,5 @@ std::ostream& operator<<(std::ostream& os, const Planner& planner) {
          << "]\n";
     }
   }
-
   return os;
 }

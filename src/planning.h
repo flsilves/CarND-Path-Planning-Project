@@ -15,9 +15,12 @@ class Planner {
   Planner(const VehicleState& ego, TrajectoryGenerator& gen,
           const Prediction& predictions, const MapWaypoints& map,
           const Trajectory& previous_trajectory);
-  Planner step();
 
   Trajectory get_trajectory();
+
+  friend std::ostream& operator<<(std::ostream& os, const Planner& planner);
+
+ private:
   double cost_inneficient_lane(const Trajectory& trajectory);
   double cost_distance_to_fastest_lane(const Trajectory& trajectory);
   double cost_front_gap(const Trajectory& trajectory);
@@ -28,7 +31,7 @@ class Planner {
 
   std::vector<std::string> successor_states();
 
- public:
+ private:
   std::string state{std::string("KL")};
   std::unordered_map<std::string, Trajectory> state_trajectories;
   std::unordered_map<std::string, double> state_costs;
@@ -38,7 +41,5 @@ class Planner {
   const Prediction& predictions;
   const Trajectory& previous_trajectory;
 };
-
-std::ostream& operator<<(std::ostream& os, const Planner& planner);
 
 #endif
