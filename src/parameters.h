@@ -8,7 +8,7 @@ constexpr auto NUMBER_OF_LANES{3u};
 constexpr auto LANE_WIDTH{4u};
 constexpr auto MAP_MAX_S{6945.554};
 
-const std::string MAP_FILEPATH("data/highway_map.csv");
+const std::string MAP_FILEPATH("../data/highway_map.csv");
 
 // Trajectory generation
 constexpr auto TARGET_EGO_SPEED{49.0};
