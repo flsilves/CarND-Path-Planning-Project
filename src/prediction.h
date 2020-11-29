@@ -6,9 +6,9 @@
 #include <iomanip>
 #include <json.hpp>
 
-#include "trajectory.h"
 #include "map.h"
 #include "parameters.h"
+#include "trajectory.h"
 #include "vehicle.h"
 
 struct Gap {
@@ -28,6 +28,10 @@ class Prediction {
 
   void reset_gaps();
   void predict(const Trajectory& previous_trajectory);
+  bool safe_gap_for_trajectory(unsigned lane,
+                               const Trajectory& trajectory) const;
+
+  friend std::ostream& operator<<(std::ostream& os, const Prediction& rhs);
 
  public:
   std::array<VehicleState, N_DETECTED_VEHICLES> detected_vehicles;
@@ -36,7 +40,5 @@ class Prediction {
   const MapWaypoints map;
   const VehicleState& ego;
 };
-
-std::ostream& operator<<(std::ostream& os, const Prediction& rhs);
 
 #endif

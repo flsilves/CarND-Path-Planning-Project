@@ -60,8 +60,7 @@ int main() {
               data["end_path_s"], data["end_path_d"]);
 
           prediction.update(data["sensor_fusion"]);
-          prediction.predict(
-              previous_trajectory);  // TODO PREDICT INTO COMPLETE SIZE OF PATH
+          prediction.predict(previous_trajectory);
 
           planned_trajectory = motion_planning.get_trajectory();
 

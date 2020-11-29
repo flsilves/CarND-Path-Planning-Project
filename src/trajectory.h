@@ -33,6 +33,8 @@ class Trajectory {
   bool empty() const;
   std::size_t size() const;
 
+  friend std::ostream& operator<<(std::ostream& os, const Trajectory& path);
+
  public:
   std::vector<double> x{}, y{};
   std::deque<double> v{};
@@ -40,7 +42,5 @@ class Trajectory {
   double end_s{0.0}, end_d{0.0};
   unsigned intended_lane{1}, end_lane{1};
 };
-
-std::ostream& operator<<(std::ostream& os, const Trajectory& path);
 
 #endif

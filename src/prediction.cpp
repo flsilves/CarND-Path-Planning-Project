@@ -16,7 +16,8 @@ void Prediction::update(nlohmann::json sensor_fusion) {
     double s = object_entry[5];
     double d = object_entry[6];
 
-    VehicleState vehicle_detected{id, x, y, vx / 0.44704, vy / 0.44704, s, d};
+    VehicleState vehicle_detected{id, x, y, vx / MPH_2_MPS, vy / MPH_2_MPS,
+                                  s,  d};
 
     if (vehicle_detected.in_right_side_of_road()) {
       detected_vehicles[id] = vehicle_detected;
@@ -88,6 +89,57 @@ void Prediction::predict(const Trajectory& previous_trajectory) {
       lane_speed = fmin(lane_speed, traffic_vehicle.speed);
     }
   }
+}
+
+bool Prediction::safe_gap_for_trajectory(unsigned lane,
+                                         const Trajectory& trajectory) const {
+  bool validate_front{false}, validate_rear{false};
+  bool same_lane = (ego.get_lane() == lane);
+
+  const auto FRONT_GAP_DISTANCE = 20.0;
+  const auto BEHIND_GAP_DISTANCE = 10.0;
+  const auto BEHIND_GAP_HORIZON = 35.0;
+
+  auto& gap = predicted_gaps.at(lane);
+
+  auto vehicle_ahead = gap.vehicle_ahead.first;
+  auto vehicle_behind = gap.vehicle_behind.first;
+
+  if (vehicle_ahead.is_valid()) {
+    auto vehicle_ahead_future = gap.vehicle_ahead.second;
+
+    double gap_front = vehicle_ahead.s - ego.s;
+    double future_gap_front = vehicle_ahead_future.s - trajectory.end_s;
+
+    validate_front = (future_gap_front > FRONT_GAP_DISTANCE) &&
+                     (gap_front > FRONT_GAP_DISTANCE);
+  } else {
+    validate_front = true;
+  }
+
+  if (vehicle_behind.is_valid() && not same_lane) {
+    double gap_behind = ego.s - vehicle_behind.s;
+
+    if (gap_behind > BEHIND_GAP_HORIZON) {
+      validate_rear = true;
+    } else if (gap_behind > BEHIND_GAP_DISTANCE) {
+      auto vehicle_behind_future = gap.vehicle_behind.second;
+
+      double future_gap_behind = trajectory.end_s - vehicle_behind_future.s;
+      bool too_close_to_rear_vehicle =
+          (future_gap_behind < BEHIND_GAP_DISTANCE);
+
+      bool too_slow_relative_to_rear_vehicle =
+          (trajectory.v.front() < vehicle_behind.speed);
+
+      validate_rear = (not too_close_to_rear_vehicle) &&
+                      not(too_slow_relative_to_rear_vehicle);
+    }
+  } else {
+    validate_rear = true;
+  }
+
+  return (validate_rear && validate_front);
 }
 
 std::ostream& operator<<(std::ostream& os, const Prediction& rhs) {

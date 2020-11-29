@@ -5,7 +5,7 @@
 using std::string;
 using std::vector;
 
-static unsigned change_lane_timer{0};
+static unsigned change_lane_cooldown{0};
 namespace {
 static std::map<string, int> lane_direction = {
     {"KL", 0}, {"PLCL", -1}, {"LCL", -1}, {"LCR", 1}, {"PLCR", 1}};
@@ -23,11 +23,10 @@ Planner::Planner(const VehicleState& ego, TrajectoryGenerator& gen,
 
 vector<string> Planner::successor_states() {
   vector<string> possible_states;
-
   possible_states.push_back(state);
-  change_lane_timer++;
-  // std::cout << "change_time" << change_lane_timer << std::endl;
-  if (state.compare("KL") == 0 && (change_lane_timer > 30)) {
+  change_lane_cooldown++;
+
+  if (state.compare("KL") == 0 && (change_lane_cooldown > 50)) {
     if (ego.left_lane_exists()) {
       possible_states.push_back("PLCL");
     }
@@ -41,10 +40,10 @@ vector<string> Planner::successor_states() {
     possible_states.push_back("KL");
     possible_states.push_back("LCR");
   } else if (state.compare("LCL") == 0) {
-    change_lane_timer = 0;
+    change_lane_cooldown = 0;
     possible_states.push_back("KL");
   } else if (state.compare("LCR") == 0) {
-    change_lane_timer = 0;
+    change_lane_cooldown = 0;
     possible_states.push_back("KL");
   }
   return possible_states;
@@ -119,7 +118,6 @@ Trajectory Planner::get_trajectory() {
 
   for (auto& candidate_state : states) {
     auto trajectory = plan_trajectory(candidate_state);
-    std::cout << "candidate:" << candidate_state << '\n';
 
     if (trajectory.size() != 0) {
       double cost = calculate_cost(trajectory);
@@ -163,8 +161,8 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
 
   trajectory_generator.anchors_init();
 
-  trajectory = trajectory_generator.generate_trajectory(intended_lane, end_lane,
-                                                        candidate_state);
+  trajectory =
+      trajectory_generator.generate_trajectory(intended_lane, end_lane);
   return trajectory;
 }
 

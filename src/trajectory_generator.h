@@ -14,11 +14,26 @@ class TrajectoryGenerator {
                       const VehicleState& ego, const MapWaypoints& map,
                       const Prediction& predictions);
 
-  Trajectory generate_trajectory(unsigned intended_lane, unsigned end_lane, std::string state);
+  Trajectory generate_trajectory(unsigned intended_lane, unsigned end_lane);
 
   void anchors_init();
 
  private:
+  double get_target_distance();
+  double get_keep_lane_velocity(Trajectory& new_trajectory);
+  double get_last_planned_velocity();
+
+  double get_prepare_lane_change_velocity(Trajectory& new_trajectory,
+                                          unsigned intented_lane);
+
+  bool validate_trajectory(const Trajectory& trajectory, double ego_s);
+
+  void anchors_add(double anchor_spacement, unsigned extra_anchors,
+                   int target_lane);
+
+  void anchors_recenter();
+  void anchors_trim();
+
   double calculate_velocity(double previous_velocity);
   std::vector<double> calculate_next_point(double starting_x,
                                            double target_velocity,
@@ -26,22 +41,6 @@ class TrajectoryGenerator {
 
   double get_next_point_velocity(double last_planned_velocity,
                                  double target_velocity);
-
-  double get_target_distance();
-  double get_keep_lane_velocity(Trajectory& new_trajectory);
-  double get_last_planned_velocity();
-
-  double prepare_lane_change_velocity(Trajectory& new_trajectory,
-                                      unsigned intented_lane);
-
-  double lane_change_velocity(Trajectory& new_trajectory);
-
-  void anchors_add(double anchor_spacement, unsigned extra_anchors,
-                   int target_lane);
-
-  void anchors_recenter();
-  void anchors_trim();
-  bool validate_trajectory(Trajectory& trajectory, double ego_s);
 
   void fill_trajectory_points(Trajectory& trajectory, double target_velocity,
                               unsigned end_lane);
