@@ -27,7 +27,6 @@ void Prediction::update(nlohmann::json sensor_fusion) {
         bool continuous = previous_state.evaluate_continuity(vehicle_detected);
 
         if (not continuous) {
-          // std::cout << "ID[" << id << "] not continous!" << '\n';
           vehicle_history.clear();
         }
       }
@@ -43,37 +42,6 @@ void Prediction::update(nlohmann::json sensor_fusion) {
     }
   }
 }
-
-// VehicleState Prediction::get_front_vehicle()
-/*
-VehicleState Prediction::vehicle_close_ahead(int steps_into_future,
-                                             double ego_planned_s, int ego_lane,
-                                             double ego_s) const {
-  double predicted_gap{1000};
-  VehicleState closest_front_vehicle{};
-
-  for (auto& vehicle_history : history) {
-    if (vehicle_history.empty()) {
-      continue;
-    }
-
-    auto vehicle = vehicle_history.back();
-    bool vehicle_in_same_lane = (vehicle.get_lane() == ego_lane);
-    bool vehicle_currently_in_front = (vehicle.s > ego_s);
-
-    if (vehicle_in_same_lane && vehicle_currently_in_front) {
-      double future_vehicle_s =
-          vehicle.s + vehicle.speed * steps_into_future * TIME_PER_POINT;
-
-      double future_gap = future_vehicle_s - ego_planned_s;
-      if (future_gap < predicted_gap) {
-        predicted_gap = future_gap;
-        closest_front_vehicle = vehicle;
-      }
-    }
-  }
-  return closest_front_vehicle;
-} */
 
 void Prediction::reset_lane_speeds() {
   for (auto& lane_speed : lane_speeds) {
@@ -92,11 +60,11 @@ void Prediction::reset_gaps() {
   }
 }
 
-void Prediction::predict_gaps(VehicleState ego, double future_ego_s,
-                              double future_time) {
+void Prediction::predict(const Trajectory& previous_trajectory) {
   reset_gaps();
   reset_lane_speeds();
 
+  constexpr auto future_time = PATH_LENGTH * TIME_PER_POINT;
   constexpr auto TRAFFIC_SPEED_HORIZON_DISTANCE{100.0};
 
   for (auto& vehicle_history : history) {
@@ -120,7 +88,7 @@ void Prediction::predict_gaps(VehicleState ego, double future_ego_s,
       continue;
     }
 
-    auto delta_s = fabs(future_traffic_vehicle.s - future_ego_s);
+    auto delta_s = fabs(future_traffic_vehicle.s - previous_trajectory.end_s);
 
     auto& lane_gap = predicted_gaps[vehicle_lane];
     auto& lane_speed = lane_speeds[vehicle_lane];
