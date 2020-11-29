@@ -23,9 +23,6 @@ class Prediction {
   Prediction(const MapWaypoints& map, const VehicleState& ego);
   void update(nlohmann::json sensor_fusion);
 
-  // double vehicle_close_ahead(int steps_into_future, double ego_future_s,
-  //                           int ego_lane, double ego_s) const;
-
   void reset_lane_speeds();
   unsigned get_fastest_lane() const;
 
@@ -33,7 +30,7 @@ class Prediction {
   void predict(const Trajectory& previous_trajectory);
 
  public:
-  std::array<std::deque<VehicleState>, DETECTED_VEHICLES> history;
+  std::array<VehicleState, N_DETECTED_VEHICLES> detected_vehicles;
   std::array<Gap, NUMBER_OF_LANES> predicted_gaps;
   std::array<double, NUMBER_OF_LANES> lane_speeds;
   const MapWaypoints map;

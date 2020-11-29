@@ -18,27 +18,10 @@ void Prediction::update(nlohmann::json sensor_fusion) {
 
     VehicleState vehicle_detected{id, x, y, vx / 0.44704, vy / 0.44704, s, d};
 
-    auto& vehicle_history = history[id];
-
     if (vehicle_detected.in_right_side_of_road()) {
-      if (not vehicle_history.empty()) {
-        auto& previous_state = vehicle_history.back();
-
-        bool continuous = previous_state.evaluate_continuity(vehicle_detected);
-
-        if (not continuous) {
-          vehicle_history.clear();
-        }
-      }
-
-      vehicle_history.push_back(vehicle_detected);
-
+      detected_vehicles[id] = vehicle_detected;
     } else {
-      vehicle_history.clear();
-    }
-
-    if (vehicle_history.size() > OBJECT_HISTORY_SIZE) {
-      vehicle_history.pop_front();
+      detected_vehicles[id] = {};
     }
   }
 }
@@ -67,12 +50,11 @@ void Prediction::predict(const Trajectory& previous_trajectory) {
   constexpr auto future_time = PATH_LENGTH * TIME_PER_POINT;
   constexpr auto TRAFFIC_SPEED_HORIZON_DISTANCE{100.0};
 
-  for (auto& vehicle_history : history) {
-    if (vehicle_history.empty()) {
+  for (auto& traffic_vehicle : detected_vehicles) {
+    if (not traffic_vehicle.is_valid()) {
       continue;
     }
 
-    auto& traffic_vehicle = vehicle_history.back();
     auto future_traffic_vehicle =
         traffic_vehicle.get_prediction(future_time, map.x, map.y);
 
@@ -122,9 +104,9 @@ void Prediction::predict(const Trajectory& previous_trajectory) {
 std::ostream& operator<<(std::ostream& os, const Prediction& rhs) {
   os << std::fixed << std::setprecision(2);
   // clang-format off
-  for (auto& vehicle_history : rhs.history) {
-    if (not vehicle_history.empty()) {
-      os << vehicle_history.back() << '\n';
+  for (auto& vehicle : rhs.detected_vehicles) {
+    if (vehicle.is_valid()) {
+      os << vehicle << '\n';
     } else {
       os << "EMPTY" << '\n';
     }

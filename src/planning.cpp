@@ -228,7 +228,7 @@ std::ostream& operator<<(std::ostream& os, const Planner& planner) {
   std::vector<std::string> all_states{"KL", "PLCL", "PLCR", "LCL", "LCR"};
 
   os << std::fixed << std::setprecision(2);
-  os << "current_state[" << planner.state << "]\n";
+  os << "current_state[" << planner.state << "]\n\n";
 
   for (auto s : all_states) {
     double cost;

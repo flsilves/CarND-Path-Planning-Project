@@ -15,7 +15,7 @@ constexpr auto NUMBER_OF_LANES{3u};
 constexpr auto MAP_MAX_S{6945.554};
 const std::string MAP_FILEPATH("data/highway_map.csv");
 
-constexpr auto DETECTED_VEHICLES{12u};
+constexpr auto N_DETECTED_VEHICLES{12u};
 constexpr auto OBJECT_HISTORY_SIZE{10u};
 constexpr auto SENSOR_RANGE_METERS{200.0};
 

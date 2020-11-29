@@ -81,7 +81,7 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned intended_lane,
 
   int distance_to_lane_mark =
       static_cast<int>(new_trajectory.end_d * 100.) % 400;
-  std::cout << "DISTANCE_TO_LANEMARK:" << distance_to_lane_mark << '\n';
+  // std::cout << "DISTANCE_TO_LANEMARK:" << distance_to_lane_mark << '\n';
 
   if (previous_trajectory.end_lane != end_lane && distance_to_lane_mark > 70) {
     std::cout << "validating:" << state << '\n';
