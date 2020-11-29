@@ -108,7 +108,7 @@ bool TrajectoryGenerator::validate_trajectory(Trajectory& trajectory) {
                  trajectory.x.front(), trajectory.y.front());
 
     std::cout << "future_gap_front" << future_gap_front << std::endl;
-    validate_front = (future_gap_front > 15.0) && (current_gap_front > 30.0);
+    validate_front = (future_gap_front > 25.0) && (current_gap_front > 30.0);
   }
 
   if (vehicle_behind.is_valid()) {
