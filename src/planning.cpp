@@ -76,18 +76,7 @@ double Planner::cost_inneficient_lane(const Trajectory& trajectory) {
   double end_lane_speed = predictions.lane_speeds[trajectory.end_lane];
   double current_speed = ego.speed;
 
-  // std::cout << "end_lane_speed" << end_lane_speed << std::endl;
-  // std::cout << "intended_lane_speed" << intended_lane_speed << std::endl;
-  // std::cout << "current_speed" << current_speed << std::endl;
-
-  // std::cout << intended_lane_speed << "+" << end_lane_speed << "/"
-  //          << TARGET_EGO_SPEED << " = ";
-
-  double xx = (intended_lane_speed + end_lane_speed) / TARGET_EGO_SPEED;
-
-  // std::cout << xx << '\n';
-
-  double cost = 2.0 - xx;
+  double cost = (2.0 - intended_lane_speed + end_lane_speed) / TARGET_EGO_SPEED;
   cost = fmax(0.0, cost);
   return cost;
 }
@@ -96,8 +85,8 @@ double Planner::cost_front_gap(const Trajectory& trajectory) {
   double gap_ahead =
       predictions.predicted_gaps[trajectory.intended_lane].distance_ahead;
 
-  double cost = (150 - gap_ahead) / 150;
-
+  const double max_gap{150.};
+  double cost = (max_gap - gap_ahead) / max_gap;
   cost = fmax(0.0, cost);
   return cost;
 }
@@ -110,8 +99,6 @@ double Planner::cost_distance_to_fastest_lane(const Trajectory& trajectory) {
 
   unsigned distance_to_fastest_lane =
       abs(fastest_lane - trajectory.intended_lane);
-  // std::cout << "distance_to_fastest_lane:" << distance_to_fastest_lane <<
-  // '\n';
 
   double speed_gain =
       fastest_lane_speed - predictions.lane_speeds[ego.get_lane()];
@@ -126,14 +113,9 @@ double Planner::cost_distance_to_fastest_lane(const Trajectory& trajectory) {
 }
 
 double Planner::cost_lane_change(const Trajectory& trajectory) {
-  // std::cout << "end_lane:" << trajectory.end_lane
-  //          << " intended:" << trajectory.intended_lane << '\n';
   if (trajectory.end_lane == trajectory.intended_lane) {
-    // std::cout << "DIFFERENT" << '\n';
     return 0.0;
   } else {
-    // std::cout << "EQUAL" << '\n';
-
     return 1.0;
   }
 }
@@ -145,22 +127,16 @@ Trajectory Planner::get_trajectory() {
   state_trajectories.clear();
 
   for (auto& candidate_state : states) {
-    // std::cout << "\n\nplanning:" << candidate_state << std::endl;
     auto trajectory = plan_trajectory(candidate_state);
     std::cout << "candidate:" << candidate_state << '\n';
 
     if (trajectory.size() != 0) {
       double cost = calculate_cost(trajectory);
-      // std::cout << "cost:" << cost << std::endl;
 
       state_trajectories[candidate_state] = trajectory;
       state_costs[candidate_state] = cost;
     }
   }
-
-  // for (auto it : state_costs) {
-  // std::cout << "STATE:" << it.first << " COST:" << it.second << std::endl;
-  //}
 
   auto next_state = std::min_element(
       state_costs.begin(), state_costs.end(),
@@ -169,9 +145,6 @@ Trajectory Planner::get_trajectory() {
 
   state = next_state->first;
 
-  // std::cout << "NEXT_STATE:" << next_state->first << std::endl;
-
-  last_ego = ego;
   return state_trajectories[state];
 }
 

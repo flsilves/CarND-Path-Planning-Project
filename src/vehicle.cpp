@@ -35,11 +35,6 @@ bool VehicleState::right_lane_exists() const { return d < 12.0; }
 
 bool VehicleState::is_valid() const { return id != 42; }
 
-bool VehicleState::evaluate_continuity(VehicleState next) {
-  return (abs(next.speed - speed) < 3.0) && (abs(next.x - x) < 5.0) &&
-         (abs(next.y - y) < 5.0);
-}
-
 double VehicleState::calculate_distance_to(const VehicleState& other) const {
   return distance(x, y, other.x, other.y);
 }
@@ -56,8 +51,6 @@ VehicleState VehicleState::get_prediction(double future_time,
   prediction.s = v[0];
   prediction.d = v[1];
 
-  // std::cout << "ref" << *this << std::endl;
-  // std::cout << "prediction:" << prediction << std::endl;
   return prediction;
 }
 

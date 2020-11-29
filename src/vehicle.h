@@ -30,7 +30,6 @@ class VehicleState {
   void update(double x, double y, double s, double d, double yaw, double speed);
 
   int get_lane(double lane_width = 4.0) const;
-  bool evaluate_continuity(VehicleState next);
   bool in_right_side_of_road();
 
  public:

@@ -58,14 +58,9 @@ void Prediction::predict(const Trajectory& previous_trajectory) {
     auto future_traffic_vehicle =
         traffic_vehicle.get_prediction(future_time, map.x, map.y);
 
-    // std::cout << "traffic_vehicle:" << traffic_vehicle << '\n';
-    // std::cout << "future_traffic_vehicle:" << future_traffic_vehicle <<
-    // '\n';
-
     auto vehicle_lane = traffic_vehicle.get_lane();
 
-    // Irrelevant to predict state of the cars that are behind in the same
-    // lane
+    // Not worth to predict the state of car behind ego lane
     if ((vehicle_lane == ego.get_lane()) && (ego.s > traffic_vehicle.s)) {
       continue;
     }
@@ -79,21 +74,15 @@ void Prediction::predict(const Trajectory& previous_trajectory) {
       if (delta_s < lane_gap.distance_ahead) {
         lane_gap.distance_ahead = delta_s;
         lane_gap.vehicle_ahead = {traffic_vehicle, future_traffic_vehicle};
-        // lane_speed = traffic_vehicle.speed;
       }
     } else {
       if (delta_s < lane_gap.distance_behind) {
-        // std::cout << "HERE!!!!!!!!!!!!!!!!!!!11" << std::endl;
         lane_gap.distance_behind = delta_s;
-        // std::cout << "delta_s:" << delta_s << std::endl;
-
         lane_gap.vehicle_behind = {traffic_vehicle, future_traffic_vehicle};
-        // std::cout << lane_gap.vehicle_behind << std::endl;
       }
     }
 
-    // std::cout << "vehicle.s[" << traffic_vehicle.s << "] ego.s[" << ego.s
-    //          << "]";
+    // Calculate lane speeds based on vehicles ahead
     if ((traffic_vehicle.s > ego.s) &&
         (traffic_vehicle.s < (ego.s + TRAFFIC_SPEED_HORIZON_DISTANCE))) {
       lane_speed = fmin(lane_speed, traffic_vehicle.speed);
@@ -116,7 +105,6 @@ std::ostream& operator<<(std::ostream& os, const Prediction& rhs) {
   os << "Left[" << rhs.lane_speeds[0] << "] ";
   os << "Center[" << rhs.lane_speeds[1]  << "] ";
   os << "Right[" << rhs.lane_speeds[2] << "]\n\n";
-
 
   os << "|GAPS|\n";
   os << "Left[" << rhs.predicted_gaps[0].distance_behind << " <-> " << rhs.predicted_gaps[0].distance_ahead << "] ";

@@ -46,7 +46,7 @@ class TrajectoryGenerator {
   void fill_trajectory_points(Trajectory& trajectory, double target_velocity,
                               unsigned end_lane);
 
- public:
+ private:
   std::vector<double> anchors_x, anchors_y;
   double ref_yaw, ref_x, ref_y;
   const Trajectory& previous_trajectory;
