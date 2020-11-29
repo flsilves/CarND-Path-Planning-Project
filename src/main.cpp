@@ -130,7 +130,7 @@ void print_info(const VehicleState& ego, const VehicleState& prev_ego,
   std::cout << prediction << "\n\n";
 
   std::cout << "|PLANNER|\n"
-            << planner << "\n\n";            
+            << planner;            
 
   //if (not previous_trajectory.empty()) {
   //  std::cout << "|PREV_PATH|\n" << previous_trajectory << "\n\n";

@@ -32,6 +32,9 @@ class VehicleState {
   int get_lane(double lane_width = 4.0) const;
   bool in_right_side_of_road();
 
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const VehicleState& vehicle);
+
  public:
   std::size_t id{42};
   double x{0.0}, y{0.0};
@@ -40,7 +43,5 @@ class VehicleState {
   double yaw{0.0};
   double speed{0.0};
 };
-
-std::ostream& operator<<(std::ostream& os, const VehicleState& vehicle);
 
 #endif

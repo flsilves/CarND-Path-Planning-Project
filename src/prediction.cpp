@@ -93,14 +93,14 @@ void Prediction::predict(const Trajectory& previous_trajectory) {
 std::ostream& operator<<(std::ostream& os, const Prediction& rhs) {
   os << std::fixed << std::setprecision(2);
   // clang-format off
-  for (auto& vehicle : rhs.detected_vehicles) {
-    if (vehicle.is_valid()) {
-      os << vehicle << '\n';
-    } else {
-      os << "EMPTY" << '\n';
-    }
-  }
-  os << '\n';
+  //for (auto& vehicle : rhs.detected_vehicles) {
+  //  if (vehicle.is_valid()) {
+  //    os << vehicle << '\n';
+  //  } else {
+  //    os << "EMPTY" << '\n';
+  //  }
+  //}
+  //os << '\n';
   os << "|LANE_SPEEDS|\n";
   os << "Left[" << rhs.lane_speeds[0] << "] ";
   os << "Center[" << rhs.lane_speeds[1]  << "] ";
