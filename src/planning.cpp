@@ -23,10 +23,11 @@ Planner::Planner(const VehicleState& ego, TrajectoryGenerator& gen,
 
 vector<string> Planner::successor_states() {
   vector<string> possible_states;
+
   possible_states.push_back(state);
   change_lane_timer++;
   // std::cout << "change_time" << change_lane_timer << std::endl;
-  if (state.compare("KL") == 0 && (change_lane_timer > 50)) {
+  if (state.compare("KL") == 0 && (change_lane_timer > 30)) {
     if (ego.left_lane_exists()) {
       possible_states.push_back("PLCL");
     }
@@ -58,13 +59,13 @@ double Planner::calculate_cost(const Trajectory& trajectory) {
   double c3 = 4 * cost_lane_change(trajectory);
   double c4 = 5 * cost_front_gap(trajectory);
 
-  std::cout << "c1:" << c1 << '\n';
+  // std::cout << "c1:" << c1 << '\n';
 
-  std::cout << "c2:" << c2 << '\n';
+  // std::cout << "c2:" << c2 << '\n';
 
-  std::cout << "c3:" << c3 << '\n';
+  // std::cout << "c3:" << c3 << '\n';
 
-  std::cout << "c4:" << c4 << '\n';
+  // std::cout << "c4:" << c4 << '\n';
 
   return c1 + c2 + c3 + c4;
 }
@@ -79,12 +80,12 @@ double Planner::cost_inneficient_lane(const Trajectory& trajectory) {
   // std::cout << "intended_lane_speed" << intended_lane_speed << std::endl;
   // std::cout << "current_speed" << current_speed << std::endl;
 
-  std::cout << intended_lane_speed << "+" << end_lane_speed << "/"
-            << TARGET_EGO_SPEED << " = ";
+  // std::cout << intended_lane_speed << "+" << end_lane_speed << "/"
+  //          << TARGET_EGO_SPEED << " = ";
 
   double xx = (intended_lane_speed + end_lane_speed) / TARGET_EGO_SPEED;
 
-  std::cout << xx << '\n';
+  // std::cout << xx << '\n';
 
   double cost = 2.0 - xx;
   cost = fmax(0.0, cost);
@@ -109,7 +110,8 @@ double Planner::cost_distance_to_fastest_lane(const Trajectory& trajectory) {
 
   unsigned distance_to_fastest_lane =
       abs(fastest_lane - trajectory.intended_lane);
-  std::cout << "distance_to_fastest_lane:" << distance_to_fastest_lane << '\n';
+  // std::cout << "distance_to_fastest_lane:" << distance_to_fastest_lane <<
+  // '\n';
 
   double speed_gain =
       fastest_lane_speed - predictions.lane_speeds[ego.get_lane()];
@@ -124,13 +126,13 @@ double Planner::cost_distance_to_fastest_lane(const Trajectory& trajectory) {
 }
 
 double Planner::cost_lane_change(const Trajectory& trajectory) {
-  std::cout << "end_lane:" << trajectory.end_lane
-            << " intended:" << trajectory.intended_lane << '\n';
+  // std::cout << "end_lane:" << trajectory.end_lane
+  //          << " intended:" << trajectory.intended_lane << '\n';
   if (trajectory.end_lane == trajectory.intended_lane) {
-    std::cout << "DIFFERENT" << '\n';
+    // std::cout << "DIFFERENT" << '\n';
     return 0.0;
   } else {
-    std::cout << "EQUAL" << '\n';
+    // std::cout << "EQUAL" << '\n';
 
     return 1.0;
   }
@@ -169,6 +171,7 @@ Trajectory Planner::get_trajectory() {
 
   // std::cout << "NEXT_STATE:" << next_state->first << std::endl;
 
+  last_ego = ego;
   return state_trajectories[state];
 }
 
@@ -216,8 +219,8 @@ Trajectory Planner::plan_trajectory(const std::string& candidate_state) {
   // std::cout << "candidate:" << candidate_state << " i[" << intended_lane
   //          << "] end[" << end_lane << "]\n";
 
-  trajectory =
-      trajectory_generator.generate_trajectory(intended_lane, end_lane);
+  trajectory = trajectory_generator.generate_trajectory(intended_lane, end_lane,
+                                                        candidate_state);
   return trajectory;
 }
 

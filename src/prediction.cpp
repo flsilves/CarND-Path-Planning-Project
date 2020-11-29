@@ -80,7 +80,7 @@ void Prediction::predict(const Trajectory& previous_trajectory) {
     // std::cout << "future_traffic_vehicle:" << future_traffic_vehicle <<
     // '\n';
 
-    auto vehicle_lane = future_traffic_vehicle.get_lane();
+    auto vehicle_lane = traffic_vehicle.get_lane();
 
     // Irrelevant to predict state of the cars that are behind in the same
     // lane
@@ -88,7 +88,7 @@ void Prediction::predict(const Trajectory& previous_trajectory) {
       continue;
     }
 
-    auto delta_s = fabs(future_traffic_vehicle.s - previous_trajectory.end_s);
+    auto delta_s = fabs(traffic_vehicle.s - ego.s);
 
     auto& lane_gap = predicted_gaps[vehicle_lane];
     auto& lane_speed = lane_speeds[vehicle_lane];
@@ -122,14 +122,14 @@ void Prediction::predict(const Trajectory& previous_trajectory) {
 std::ostream& operator<<(std::ostream& os, const Prediction& rhs) {
   os << std::fixed << std::setprecision(2);
   // clang-format off
-  //for (auto& vehicle_history : rhs.history) {
-  //  if (not vehicle_history.empty()) {
-  //    os << vehicle_history.back() << '\n';
-  //  } else {
-  //    os << "EMPTY" << '\n';
-  //  }
-  //}
-  //os << '\n';
+  for (auto& vehicle_history : rhs.history) {
+    if (not vehicle_history.empty()) {
+      os << vehicle_history.back() << '\n';
+    } else {
+      os << "EMPTY" << '\n';
+    }
+  }
+  os << '\n';
   os << "|LANE_SPEEDS|\n";
   os << "Left[" << rhs.lane_speeds[0] << "] ";
   os << "Center[" << rhs.lane_speeds[1]  << "] ";

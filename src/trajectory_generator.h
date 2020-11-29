@@ -14,7 +14,7 @@ class TrajectoryGenerator {
                       const VehicleState& ego, const MapWaypoints& map,
                       const Prediction& predictions);
 
-  Trajectory generate_trajectory(unsigned intended_lane, unsigned end_lane);
+  Trajectory generate_trajectory(unsigned intended_lane, unsigned end_lane, std::string state);
 
   void anchors_init();
 
@@ -41,7 +41,7 @@ class TrajectoryGenerator {
 
   void anchors_recenter();
   void anchors_trim();
-  bool validate_trajectory(Trajectory& trajectory);
+  bool validate_trajectory(Trajectory& trajectory, double ego_s);
 
   void fill_trajectory_points(Trajectory& trajectory, double target_velocity,
                               unsigned end_lane);

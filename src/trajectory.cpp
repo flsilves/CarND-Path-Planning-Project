@@ -46,6 +46,30 @@ double Trajectory::calculate_end_angle() {
   return end_angle;
 }
 
+double Trajectory::calculate_begin_angle() const {
+  double begin_angle = 0.;
+  if (x.size() > 2 && y.size() > 2) {
+    double x2 = x.at(1);
+    double y2 = y.at(1);
+    double x1 = x.at(0);
+    double y1 = y.at(0);
+    begin_angle = atan2(y2 - y1, x2 - x1);
+  }
+  return begin_angle;
+}
+
+double Trajectory::get_begin_s(const std::vector<double>& map_x,
+                               const std::vector<double>& map_y) const {
+  double theta = calculate_begin_angle();
+
+  double s = 0.;
+  if (not x.empty() && not y.empty()) {
+    auto v = getFrenet(x.front(), y.front(), theta, map_x, map_y);
+    s = v[0];
+  }
+  return s;
+}
+
 void Trajectory::calculate_end_frenet(const std::vector<double>& map_x,
                                       const std::vector<double>& map_y) {
   double theta = calculate_end_angle();

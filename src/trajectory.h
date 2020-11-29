@@ -17,12 +17,15 @@ class Trajectory {
               double end_s, double end_d);
 
   double calculate_end_angle();
+  double calculate_begin_angle() const;
 
   void calculate_end_frenet(const std::vector<double>& map_x,
                             const std::vector<double>& map_y);
 
-  double get_last_point_velocity() const ;
-  
+  double get_last_point_velocity() const;
+
+  double get_begin_s(const std::vector<double>& map_x,
+                     const std::vector<double>& map_y) const;
 
   void trim(std::size_t new_size);
   void consume_velocity_points(unsigned n_points);

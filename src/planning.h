@@ -47,6 +47,8 @@ class Planner {
   const MapWaypoints& map;
   const Prediction& predictions;
   const Trajectory& previous_trajectory;
+  VehicleState last_ego;
+
 };
 
 std::ostream& operator<<(std::ostream& os, const Planner& planner);
