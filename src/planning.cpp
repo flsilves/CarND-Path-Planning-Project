@@ -4,6 +4,8 @@
 
 using std::string;
 using std::vector;
+
+static unsigned change_lane_timer{0};
 namespace {
 static std::map<string, int> lane_direction = {
     {"KL", 0}, {"PLCL", -1}, {"LCL", -1}, {"LCR", 1}, {"PLCR", 1}};
@@ -22,7 +24,9 @@ Planner::Planner(const VehicleState& ego, TrajectoryGenerator& gen,
 vector<string> Planner::successor_states() {
   vector<string> possible_states;
   possible_states.push_back(state);
-  if (state.compare("KL") == 0) {
+  change_lane_timer++;
+  // std::cout << "change_time" << change_lane_timer << std::endl;
+  if (state.compare("KL") == 0 && (change_lane_timer > 50)) {
     if (ego.left_lane_exists()) {
       possible_states.push_back("PLCL");
     }
@@ -36,8 +40,10 @@ vector<string> Planner::successor_states() {
     possible_states.push_back("KL");
     possible_states.push_back("LCR");
   } else if (state.compare("LCL") == 0) {
+    change_lane_timer = 0;
     possible_states.push_back("KL");
   } else if (state.compare("LCR") == 0) {
+    change_lane_timer = 0;
     possible_states.push_back("KL");
   }
   return possible_states;
@@ -49,7 +55,7 @@ double Planner::calculate_cost(const Trajectory& trajectory) {
 
   double c1 = 10 * cost_inneficient_lane(trajectory);
   double c2 = cost_distance_to_fastest_lane(trajectory);
-  double c3 = 2 * cost_lane_change(trajectory);
+  double c3 = 4 * cost_lane_change(trajectory);
   double c4 = 5 * cost_front_gap(trajectory);
 
   std::cout << "c1:" << c1 << '\n';
@@ -118,9 +124,14 @@ double Planner::cost_distance_to_fastest_lane(const Trajectory& trajectory) {
 }
 
 double Planner::cost_lane_change(const Trajectory& trajectory) {
-  if (ego.get_lane() == trajectory.intended_lane) {
+  std::cout << "end_lane:" << trajectory.end_lane
+            << " intended:" << trajectory.intended_lane << '\n';
+  if (trajectory.end_lane == trajectory.intended_lane) {
+    std::cout << "DIFFERENT" << '\n';
     return 0.0;
   } else {
+    std::cout << "EQUAL" << '\n';
+
     return 1.0;
   }
 }

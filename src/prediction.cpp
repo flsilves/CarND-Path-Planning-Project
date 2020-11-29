@@ -112,11 +112,11 @@ void Prediction::predict_gaps(VehicleState ego, double future_ego_s,
     // std::cout << "future_traffic_vehicle:" << future_traffic_vehicle <<
     // '\n';
 
-    auto vehicle_lane = traffic_vehicle.get_lane();
+    auto vehicle_lane = future_traffic_vehicle.get_lane();
 
     // Irrelevant to predict state of the cars that are behind in the same
     // lane
-    if (vehicle_lane == ego.get_lane() && ego.s > traffic_vehicle.s) {
+    if ((vehicle_lane == ego.get_lane()) && (ego.s > traffic_vehicle.s)) {
       continue;
     }
 

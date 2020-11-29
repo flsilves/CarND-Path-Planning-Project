@@ -66,10 +66,10 @@ int main() {
 
           planned_trajectory = motion_planning.get_trajectory();
 
-          previous_trajectory = planned_trajectory;
-
           print_info(ego, prev_ego, previous_trajectory, planned_trajectory,
                      prediction, motion_planning);
+
+          previous_trajectory = planned_trajectory;
 
           json msgJson;
           msgJson["next_x"] = planned_trajectory.x;

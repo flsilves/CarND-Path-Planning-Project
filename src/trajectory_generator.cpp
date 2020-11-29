@@ -24,7 +24,7 @@ double TrajectoryGenerator::get_keep_lane_velocity(Trajectory& new_trajectory) {
       predictions.predicted_gaps[ego_lane].distance_ahead;
   double current_lane_speed = predictions.lane_speeds[ego_lane];
 
-  if (predicted_front_gap < 0) {
+  if (predicted_front_gap < 5) {
     // std::cout << "NEGATIVE GAP" << std::endl;
     planned_velocity = current_lane_speed - 20.0;  // EMERGENCY_BRAKE
     new_trajectory.trim(5);
@@ -36,7 +36,7 @@ double TrajectoryGenerator::get_keep_lane_velocity(Trajectory& new_trajectory) {
 
 double TrajectoryGenerator::prepare_lane_change_velocity(
     Trajectory& new_trajectory, unsigned intended_lane) {
-  return fmin(predictions.lane_speeds[intended_lane] + 3.0, 49.5);
+  return fmin(predictions.lane_speeds[intended_lane] + 2.0, 49.5);
 }
 
 double TrajectoryGenerator::lane_change_velocity(Trajectory& new_trajectory) {
@@ -71,7 +71,6 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned intended_lane,
   }
 
   fill_trajectory_points(new_trajectory, planned_velocity, end_lane);
-  new_trajectory.calculate_end_frenet(map.x, map.y);
 
   if (previous_trajectory.end_lane != end_lane) {
     if (not validate_trajectory(new_trajectory)) {
@@ -98,21 +97,34 @@ bool TrajectoryGenerator::validate_trajectory(Trajectory& trajectory) {
   // << std::endl;
 
   if (vehicle_ahead.is_valid()) {
-    double gap_front = distance(vehicle_ahead.x, vehicle_ahead.y,
-                                trajectory.x.back(), trajectory.y.back());
+    double future_gap_front =
+        distance(vehicle_ahead.x, vehicle_ahead.y, trajectory.x.back(),
+                 trajectory.y.back());
 
-    std::cout << "gap_front" << gap_front << std::endl;
-    validate_front = (gap_front > 5.0);
+    auto vehicle_ahead_current = predicted_gaps.vehicle_ahead.first;
+
+    double current_gap_front =
+        distance(vehicle_ahead_current.x, vehicle_ahead_current.y,
+                 trajectory.x.front(), trajectory.y.front());
+
+    std::cout << "future_gap_front" << future_gap_front << std::endl;
+    validate_front = (future_gap_front > 15.0) && (current_gap_front > 30.0);
   }
 
   if (vehicle_behind.is_valid()) {
     double gap_behind = distance(vehicle_behind.x, vehicle_behind.y,
                                  trajectory.x.front(), trajectory.y.front());
-    bool too_close_to_rear_vehicle = gap_behind < 10.0;
-    bool too_slow_relative_to_rear_vehicle =
-        (trajectory.v.back() < vehicle_behind.speed);
-    validate_rear = (not too_close_to_rear_vehicle) &&
-                    not(too_slow_relative_to_rear_vehicle);
+
+    if (gap_behind > 40) {
+      validate_rear = true;
+    } else {
+      bool too_close_to_rear_vehicle = gap_behind < 5.0;
+      bool too_slow_relative_to_rear_vehicle =
+          (trajectory.v.front() < vehicle_behind.speed);
+      validate_rear = (not too_close_to_rear_vehicle) &&
+                      not(too_slow_relative_to_rear_vehicle);
+    }
+
     std::cout << "gap_behind" << gap_behind << std::endl;
   }
 
@@ -154,6 +166,7 @@ void TrajectoryGenerator::fill_trajectory_points(Trajectory& trajectory,
     trajectory.y.push_back(x * sin(ref_yaw) + y * cos(ref_yaw) + ref_y);
     trajectory.v.push_back(next_point_velocity);
   }
+  trajectory.calculate_end_frenet(map.x, map.y);
 }
 
 double TrajectoryGenerator::get_next_point_velocity(
