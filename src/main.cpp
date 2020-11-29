@@ -1,117 +1,88 @@
 #include <uWS/uWS.h>
 
-#include <fstream>
 #include <iostream>
+#include <json.hpp>
 #include <string>
 #include <vector>
 
-#include "Eigen-3.3/Eigen/Core"
-#include "Eigen-3.3/Eigen/QR"
 #include "helpers.h"
-#include "json.hpp"
+#include "map.h"
+#include "parameters.h"
+#include "planning.h"
+#include "prediction.h"
+#include "trajectory.h"
+#include "vehicle.h"
 
-// for convenience
 using nlohmann::json;
 using std::string;
 using std::vector;
 
+void print_info(const VehicleState& ego, const VehicleState& previous_ego,
+                const Trajectory& previous_trajectory,
+                const Trajectory& planned_trajectory,
+                const Prediction& prediction, const Planner& planning);
+
 int main() {
   uWS::Hub h;
 
-  // Load up map values for waypoint's x,y,s and d normalized normal vectors
-  vector<double> map_waypoints_x;
-  vector<double> map_waypoints_y;
-  vector<double> map_waypoints_s;
-  vector<double> map_waypoints_dx;
-  vector<double> map_waypoints_dy;
+  VehicleState ego{};
+  Trajectory previous_trajectory{};
+  Trajectory planned_trajectory{};
+  MapWaypoints map(MAP_FILEPATH, MAP_MAX_S);
+  Prediction prediction(map, ego);
+  TrajectoryGenerator trajectory_generator{previous_trajectory, ego, map,
+                                           prediction};
+  Planner motion_planning{ego, trajectory_generator, prediction, map,
+                          previous_trajectory};
 
-  // Waypoint map to read from
-  string map_file_ = "../data/highway_map.csv";
-  // The max s value before wrapping around the track back to 0
-  double max_s = 6945.554;
-
-  std::ifstream in_map_(map_file_.c_str(), std::ifstream::in);
-
-  string line;
-  while (getline(in_map_, line)) {
-    std::istringstream iss(line);
-    double x;
-    double y;
-    float s;
-    float d_x;
-    float d_y;
-    iss >> x;
-    iss >> y;
-    iss >> s;
-    iss >> d_x;
-    iss >> d_y;
-    map_waypoints_x.push_back(x);
-    map_waypoints_y.push_back(y);
-    map_waypoints_s.push_back(s);
-    map_waypoints_dx.push_back(d_x);
-    map_waypoints_dy.push_back(d_y);
-  }
-
-  h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s,
-               &map_waypoints_dx,
-               &map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data,
-                                  size_t length, uWS::OpCode opCode) {
-    // "42" at the start of the message means there's a websocket message event.
-    // The 4 signifies a websocket message
-    // The 2 signifies a websocket event
-    if (length && length > 2 && data[0] == '4' && data[1] == '2') {
+  h.onMessage([&ego, &previous_trajectory, &planned_trajectory, &map,
+               &prediction, &motion_planning](uWS::WebSocket<uWS::SERVER> ws,
+                                              char* data, std::size_t length,
+                                              uWS::OpCode opCode) {
+    if (valid_socket_message(length, data)) {
       auto s = hasData(data);
 
-      if (s != "") {
+      if (not s.empty()) {
         auto j = json::parse(s);
-
-        string event = j[0].get<string>();
+        auto event = j[0].get<string>();
 
         if (event == "telemetry") {
-          // j[1] is the data JSON object
+          auto data = j[1];
 
-          // Main car's localization Data
-          double car_x = j[1]["x"];
-          double car_y = j[1]["y"];
-          double car_s = j[1]["s"];
-          double car_d = j[1]["d"];
-          double car_yaw = j[1]["yaw"];
-          double car_speed = j[1]["speed"];
+          VehicleState prev_ego{ego};
 
-          // Previous path data given to the Planner
-          auto previous_path_x = j[1]["previous_path_x"];
-          auto previous_path_y = j[1]["previous_path_y"];
-          // Previous path's end s and d values
-          double end_path_s = j[1]["end_path_s"];
-          double end_path_d = j[1]["end_path_d"];
+          ego.update(data["x"], data["y"], data["s"], data["d"], data["yaw"],
+                     data["speed"]);
 
-          // Sensor Fusion Data, a list of all other cars on the same side
-          //   of the road.
-          auto sensor_fusion = j[1]["sensor_fusion"];
+          previous_trajectory.update(
+              data["previous_path_x"].get<std::vector<double>>(),
+              data["previous_path_y"].get<std::vector<double>>(),
+              data["end_path_s"], data["end_path_d"]);
+
+          prediction.update(data["sensor_fusion"]);
+          prediction.predict_gaps(
+              ego, previous_trajectory.end_s,
+              50 * 0.02);  // TODO PREDICT INTO COMPLETE SIZE OF PATH
+
+          planned_trajectory = motion_planning.get_trajectory();
+
+          print_info(ego, prev_ego, previous_trajectory, planned_trajectory,
+                     prediction, motion_planning);
+
+          previous_trajectory = planned_trajectory;
 
           json msgJson;
-
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
-
-          /**
-           * TODO: define a path made up of (x,y) points that the car will visit
-           *   sequentially every .02 seconds
-           */
-
-          msgJson["next_x"] = next_x_vals;
-          msgJson["next_y"] = next_y_vals;
+          msgJson["next_x"] = planned_trajectory.x;
+          msgJson["next_y"] = planned_trajectory.y;
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
-
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-        }  // end "telemetry" if
+        }
       } else {
-        // Manual driving
         std::string msg = "42[\"manual\",{}]";
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
-    }  // end websocket if
+    }
   });  // end h.onMessage
 
   h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
@@ -119,7 +90,7 @@ int main() {
   });
 
   h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,
-                         char *message, size_t length) {
+                         char* message, std::size_t length) {
     ws.close();
     std::cout << "Disconnected" << std::endl;
   });
@@ -133,4 +104,43 @@ int main() {
   }
 
   h.run();
+}
+
+void print_info(const VehicleState& ego, const VehicleState& prev_ego,
+                const Trajectory& previous_trajectory,
+                const Trajectory& planned_trajectory,
+                const Prediction& prediction, const Planner& planner) {
+  // double delta_x = fabs(ego.x - prev_ego.x);
+  // double delta_y = fabs(ego.y - prev_ego.y);
+  //
+  // double distance_traveled = sqrt(delta_x * delta_x + delta_y * delta_y);
+  //
+  // double average_speed = (ego.speed / 2 + prev_ego.speed / 2);
+  //
+  // double time = distance_traveled / average_speed;
+
+  // clang-format off
+  std::cout << "|EGO|\n" 
+            << ego << "\n\n";
+
+  //std::cout << "|STEP|\n"
+  //          << "t_delta[" << time << "] "
+  //          << "dist_delta[" << distance_traveled << "] "
+  //          << "v_avg[" << average_speed << "]\n\n";
+
+  std::cout << prediction << "\n\n";
+
+  std::cout << "|PLANNER|\n"
+            << planner << "\n\n";            
+
+  if (not previous_trajectory.empty()) {
+    std::cout << "|PREV_PATH|\n" << previous_trajectory << "\n\n";
+  }
+
+  std::cout << "|NEXT_PATH|\n" << planned_trajectory << "\n\n";
+
+
+
+  std::cout << "--------------------------------" << std::endl;
+  // clang-format onOBJECT_HISTORY
 }
