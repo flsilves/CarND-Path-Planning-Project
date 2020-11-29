@@ -50,8 +50,6 @@ vector<string> Planner::successor_states() {
 }
 
 double Planner::calculate_cost(const Trajectory& trajectory) {
-  const auto INNEFICIENCY_WEIGHT = 10.0;
-
   double c1 = 10 * cost_inneficient_lane(trajectory);
   double c2 = cost_distance_to_fastest_lane(trajectory);
   double c3 = 4 * cost_lane_change(trajectory);

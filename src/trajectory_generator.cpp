@@ -73,7 +73,7 @@ Trajectory TrajectoryGenerator::generate_trajectory(unsigned intended_lane,
 
   if (previous_trajectory.end_lane != end_lane) {  // Only for LCL/LCR
     int distance_to_lane_mark_cm =
-        static_cast<int>(new_trajectory.end_d * 100.) % 400;
+        static_cast<int>(new_trajectory.end_d * 100.) % (LANE_WIDTH * 100);
 
     // do not validate if it's already in the lane border, prevent swerving
     if (distance_to_lane_mark_cm > 70) {

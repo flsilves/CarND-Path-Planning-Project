@@ -35,10 +35,6 @@ bool VehicleState::right_lane_exists() const { return d < 12.0; }
 
 bool VehicleState::is_valid() const { return id != 42; }
 
-double VehicleState::calculate_distance_to(const VehicleState& other) const {
-  return distance(x, y, other.x, other.y);
-}
-
 VehicleState VehicleState::get_prediction(double future_time,
                                           const vector<double>& map_x,
                                           const vector<double>& map_y) {
