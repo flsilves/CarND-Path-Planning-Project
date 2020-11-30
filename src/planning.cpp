@@ -85,8 +85,15 @@ double Planner::cost_distance_to_fastest_lane(const Trajectory& trajectory) {
   unsigned fastest_lane = predictions.get_fastest_lane();
   double fastest_lane_speed = predictions.lane_speeds[fastest_lane];
 
-  unsigned distance_to_fastest_lane =
-      abs(fastest_lane - trajectory.intended_lane);
+  unsigned distance_to_fastest_lane;
+
+  if (fastest_lane > trajectory.intended_lane) {
+    distance_to_fastest_lane = fastest_lane - trajectory.intended_lane;
+  } else if (trajectory.intended_lane > fastest_lane) {
+    distance_to_fastest_lane = trajectory.intended_lane - fastest_lane;
+  } else {
+    distance_to_fastest_lane = 0;
+  }
 
   double speed_gain =
       fastest_lane_speed - predictions.lane_speeds[ego.get_lane()];
